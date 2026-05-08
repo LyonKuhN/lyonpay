@@ -70,7 +70,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'lyonpay-secret-key-2026';
 
 // Resend Email logic
 const sendConfirmationEmail = async (email, name, token) => {
-  const verifyUrl = `http://localhost:5173/verify?token=${token}`;
+  const frontendUrl = process.env.SERVICE_FQDN_LYONPAY_WEB ? `http://${process.env.SERVICE_FQDN_LYONPAY_WEB}` : 'http://localhost:5173';
+  const verifyUrl = `${frontendUrl}/verify?token=${token}`;
   try {
     await resend.emails.send({
       from: process.env.EMAIL_FROM || 'Lyonpay <onboarding@resend.dev>',
@@ -157,6 +158,29 @@ app.post('/api/auth/verify', async (req, res) => {
     res.status(500).json({ error: err.message }); 
   }
 });
+
+app.post('/api/auth/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM auth.users WHERE email = $1', [email]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const user = result.rows[0];
+    if (user.confirmed) return res.status(400).json({ error: 'E-mail já confirmado' });
+
+    const confirmationToken = crypto.randomBytes(32).toString('hex');
+    await pool.query('UPDATE auth.users SET confirmation_token = $1 WHERE id = $2', [confirmationToken, user.id]);
+    
+    const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [user.id]);
+    const name = profile.rows[0]?.display_name || 'Usuário';
+
+    await sendConfirmationEmail(email, name, confirmationToken);
+    res.json({ message: 'Novo código enviado com sucesso!' });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;

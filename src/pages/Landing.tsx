@@ -13,6 +13,29 @@ export default function Landing() {
   const [successMessage, setSuccessMessage] = useState('');
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
 
+  const handleResend = async () => {
+    if (!formData.email) {
+      setError('Por favor, informe seu e-mail para o reenvio.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao reenviar');
+      setSuccessMessage('Novo código enviado! Verifique sua caixa de entrada.');
+      setError('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -307,7 +330,20 @@ export default function Landing() {
               <>
                 <h2 className="text-3xl font-bold text-white mb-1">{isAuthModalOpen === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}</h2>
                 <p className="text-zinc-500 mb-8 text-sm">{isAuthModalOpen === 'login' ? 'Continue de onde parou.' : '7 dias grátis, sem cartão.'}</p>
-                {error && <div className="mb-6 p-4 rounded-xl bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] text-sm">{error}</div>}
+                {error && (
+                  <div className="mb-6 p-4 rounded-xl bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 text-[#FF4D4D] text-sm flex flex-col gap-3">
+                    <p>{error}</p>
+                    {error.includes('Confirme seu e-mail') && (
+                      <button 
+                        type="button"
+                        onClick={handleResend}
+                        className="text-xs font-black uppercase tracking-widest bg-[#FF4D4D]/20 py-2 rounded-lg hover:bg-[#FF4D4D]/30 transition-all"
+                      >
+                        Reenviar E-mail de Confirmação
+                      </button>
+                    )}
+                  </div>
+                )}
                 <form onSubmit={handleAuth} className="space-y-4">
                   {isAuthModalOpen === 'register' && (
                     <div>
