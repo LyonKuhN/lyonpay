@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle2, Loader2, ChevronLeft, ChevronRight, Zap, Info, Check, RotateCcw, AlertTriangle, DollarSign, Tag, X, PieChart, Wallet, Layers, ArrowUp, ArrowDown } from 'lucide-react';
+import { Calendar, CheckCircle2, Loader2, ChevronLeft, ChevronRight, Zap, Info, Check, RotateCcw, AlertTriangle, DollarSign, Tag, X, PieChart, Wallet, Layers, ArrowUp, ArrowDown, Edit2, Save } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
@@ -21,6 +21,8 @@ export default function Pagamentos() {
   const [activeTab, setActiveTab] = useState<'pendentes' | 'pagas'>('pendentes');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
 
   const getRelativeTime = (dateStr: string) => {
     const today = new Date();
@@ -101,6 +103,24 @@ export default function Pagamentos() {
         if (response.ok) { fetchPagamentos(); fetchAtrasadas(); }
       } catch (err) { console.error(err); setDespesas(prev => prev.map(d => d.id === id ? { ...d, isAnimating: false } : d)); }
     }, 400);
+  };
+
+  const handleUpdateValor = async (id: string) => {
+    const valorNum = parseFloat(editingValue.replace(',', '.'));
+    if (isNaN(valorNum)) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/valor`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ valor: valorNum })
+      });
+      if (response.ok) {
+        setEditingId(null);
+        fetchPagamentos();
+        fetchAtrasadas();
+      }
+    } catch (err) { console.error(err); }
   };
 
   const calculateDiff = (current: number, prev: number) => {
@@ -260,7 +280,37 @@ export default function Pagamentos() {
                   
                   <div className="flex items-center justify-between sm:justify-end gap-6 md:gap-10 border-t border-white/5 sm:border-0 pt-4 sm:pt-0">
                     <div className="text-left sm:text-right">
-                      <p className="text-xl md:text-4xl font-black text-white tracking-tighter leading-none">R$ {Number(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      {editingId === conta.id ? (
+                        <div className="flex items-center justify-end gap-2 mb-2">
+                          <input
+                            type="text"
+                            className="w-24 md:w-40 bg-white/5 border border-[#a3ff12]/30 text-white text-lg md:text-3xl font-black rounded-lg px-2 py-1 outline-none focus:border-[#a3ff12]"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateValor(conta.id)}
+                            autoFocus
+                          />
+                          <button onClick={() => handleUpdateValor(conta.id)} className="p-2 bg-[#a3ff12] text-black rounded-lg hover:scale-110 active:scale-95 transition-all">
+                            <Save size={16} />
+                          </button>
+                          <button onClick={() => setEditingId(null)} className="p-2 bg-white/5 text-zinc-500 rounded-lg hover:text-white transition-all">
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 justify-end group">
+                          {!conta.pago && (
+                            <button 
+                              onClick={() => { setEditingId(conta.id); setEditingValue(conta.valor.toString()); }}
+                              className="p-2 text-zinc-600 hover:text-[#a3ff12] transition-all bg-white/5 rounded-lg"
+                              title="Editar valor"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                          )}
+                          <p className="text-xl md:text-4xl font-black text-white tracking-tighter leading-none">R$ {Number(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      )}
                       <p className="text-[7px] md:text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-1">Venc. {formatDate(conta.data_vencimento)}</p>
                     </div>
                     <div className="shrink-0">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Tag, Loader2, Bookmark, PieChart, Wallet, Layers, CheckCircle2, ChevronDown, Calculator } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Tag, Loader2, Bookmark, PieChart, Wallet, Layers, CheckCircle2, ChevronDown, Calculator, Edit2, Save, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
@@ -27,6 +27,8 @@ export default function Despesas() {
   const [parcelInputMode, setParcelInputMode] = useState<'parcela' | 'total'>('parcela');
   // Valor bruto digitado no campo (para manter o que o usuário escreveu)
   const [rawAmount, setRawAmount] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
 
   const emptyForm = {
     descricao: '', valor: '',
@@ -117,6 +119,23 @@ export default function Despesas() {
     if (!confirm('Excluir esta despesa?')) return;
     await fetch(`${API_BASE_URL}/api/despesas/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     fetchData();
+  };
+
+  const handleUpdateValor = async (id: string) => {
+    const valorNum = parseFloat(editingValue.replace(',', '.'));
+    if (isNaN(valorNum)) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/valor`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ valor: valorNum })
+      });
+      if (response.ok) {
+        setEditingId(null);
+        fetchData();
+      }
+    } catch (err) { console.error(err); }
   };
 
   const toggleGroup = (key: string) => {
@@ -251,9 +270,39 @@ export default function Despesas() {
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                         <div className="text-left sm:text-right">
-                          <p className={`text-xl md:text-2xl font-black tracking-tighter ${item.pago ? 'text-[#a3ff12]' : 'text-white'}`}>
-                            R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
+                          {editingId === item.id ? (
+                            <div className="flex items-center justify-end gap-2 mb-2" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                className="w-24 md:w-32 bg-white/5 border border-[#a3ff12]/30 text-white text-lg md:text-xl font-black rounded-lg px-2 py-1 outline-none focus:border-[#a3ff12]"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleUpdateValor(item.id)}
+                                autoFocus
+                              />
+                              <button onClick={() => handleUpdateValor(item.id)} className="p-2 bg-[#a3ff12] text-black rounded-lg hover:scale-110 active:scale-95 transition-all">
+                                <Save size={14} />
+                              </button>
+                              <button onClick={() => setEditingId(null)} className="p-2 bg-white/5 text-zinc-500 rounded-lg hover:text-white transition-all">
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 justify-end group/edit">
+                              {!item.pago && !item._isGroup && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingValue(item.valor.toString()); }}
+                                  className="p-1.5 text-zinc-600 hover:text-[#a3ff12] transition-all bg-white/5 rounded-lg"
+                                  title="Editar valor"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                              )}
+                              <p className={`text-xl md:text-2xl font-black tracking-tighter ${item.pago ? 'text-[#a3ff12]' : 'text-white'}`}>
+                                R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                          )}
                           {item._isGroup && <p className="text-[8px] md:text-[9px] font-black text-zinc-500 uppercase">por parcela</p>}
                         </div>
                         <div className="flex items-center gap-2">

@@ -42,7 +42,8 @@ const app = express();
 
 // --- SECURITY MIDDLEWARES ---
 app.use(helmet({
-  contentSecurityPolicy: false, // Desativado para facilitar carregamento de scripts externos como Stripe
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
 const limiter = rateLimit({
@@ -53,7 +54,11 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter); // Aplica limite em todas as rotas da API
 
-app.use(cors());
+app.use(cors({
+  origin: '*', // Permite todas as origens para facilitar o deploy inicial
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -379,6 +384,17 @@ app.patch('/api/despesas/:id/pendente', authenticateToken, async (req, res) => {
   try {
     await pool.query('UPDATE public.despesas SET pago = false, data_pagamento = null WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     res.json({ message: 'Pendente' });
+  } catch (err) { 
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+app.patch('/api/despesas/:id/valor', authenticateToken, async (req, res) => {
+  const { valor } = req.body;
+  try {
+    await pool.query('UPDATE public.despesas SET valor = $1 WHERE id = $2 AND user_id = $3', [valor, req.params.id, req.user.id]);
+    res.json({ message: 'Valor atualizado' });
   } catch (err) { 
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
     res.status(500).json({ error: err.message }); 

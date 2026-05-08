@@ -13,12 +13,8 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 glass border-r border-white/5 flex flex-col hidden md:flex">
-      <div className="p-8 flex items-center gap-3">
-        {/* Placeholder para a logo do Leão */}
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-yellow-600 flex items-center justify-center font-bold text-background text-xl shadow-lg">
-          L
-        </div>
-        <span className="font-bold text-xl tracking-tight">Lyonpay</span>
+      <div className="p-8 flex items-center justify-center">
+        <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain drop-shadow-lg" />
       </div>
 
       <nav className="flex-1 px-4 space-y-2 mt-4">

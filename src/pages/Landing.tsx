@@ -57,9 +57,8 @@ export default function Landing() {
       {/* Navbar Premium */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#09090B]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FFD700] to-[#FF8C00] flex items-center justify-center font-bold text-black text-xl shadow-[0_0_15px_rgba(255,215,0,0.4)]">L</div>
-            <span className="font-bold text-xl tracking-tight text-white">Lyonpay</span>
+          <div className="flex items-center">
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain drop-shadow-lg" />
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
