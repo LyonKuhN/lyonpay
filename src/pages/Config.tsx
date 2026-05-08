@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, CreditCard, Lock, HelpCircle, AlertTriangle, CheckCircle2, Trash2, Loader2, X, Save, Sparkles, PartyPopper } from 'lucide-react';
+import { User, CreditCard, AlertTriangle, CheckCircle2, Trash2, Loader2, Save, Sparkles, PartyPopper } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Tag, Clock, AlertCircle, Loader2, Info, ChevronDown, Check, X, Bookmark, PieChart, Sparkles, TrendingUp, TrendingDown, Receipt, Wallet } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Tag, Loader2, Sparkles, TrendingUp, Receipt } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
@@ -85,14 +85,14 @@ export default function Receitas() {
           onClick={() => setIsModalOpen(true)}
           className="w-full md:w-auto flex items-center justify-center gap-3 px-8 md:px-10 py-4 md:py-5 bg-[#a3ff12] text-black font-black rounded-2xl md:rounded-[1.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl"
         >
-          <Plus size={22} md:size={24} strokeWidth={3} /> NOVA ENTRADA
+          <Plus className="w-5 h-5 md:w-6 md:h-6" strokeWidth={3} /> NOVA ENTRADA
         </button>
       </header>
 
       {/* CARDS DE RESUMO (RESTAURADOS) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
         <div className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-[#15151A] border border-[#a3ff12]/10 shadow-xl flex flex-col justify-between">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[#a3ff12]/10 flex items-center justify-center text-[#a3ff12] mb-3"><TrendingUp size={16} md:size={18}/></div>
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[#a3ff12]/10 flex items-center justify-center text-[#a3ff12] mb-3"><TrendingUp className="w-4 h-4" /></div>
           <div>
             <p className="text-[#a3ff12] text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1">Total Recebido</p>
             <h2 className="text-lg md:text-2xl font-black text-white leading-tight">R$ {totalRecebido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
@@ -100,7 +100,7 @@ export default function Receitas() {
         </div>
 
         <div className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-[#15151A] border border-white/5 shadow-xl flex flex-col justify-between">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 mb-3"><Receipt size={16} md:size={18}/></div>
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 mb-3"><Receipt className="w-4 h-4" /></div>
           <div>
             <p className="text-zinc-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1">Qtd Entradas</p>
             <h2 className="text-lg md:text-2xl font-black text-white leading-tight">{receitas.length}</h2>
@@ -108,7 +108,7 @@ export default function Receitas() {
         </div>
 
         <div className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-[#15151A] border border-white/5 shadow-xl flex flex-col justify-between">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 mb-3"><DollarSign size={16} md:size={18}/></div>
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 mb-3"><DollarSign className="w-4 h-4" /></div>
           <div>
             <p className="text-zinc-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1">Média p/ Lançamento</p>
             <h2 className="text-lg md:text-2xl font-black text-white leading-tight">R$ {mediaReceita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
@@ -116,7 +116,7 @@ export default function Receitas() {
         </div>
 
         <div className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-[#a3ff12]/10 to-transparent border border-[#a3ff12]/20 shadow-xl flex flex-col justify-between">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[#a3ff12] flex items-center justify-center text-black shadow-lg mb-3"><Sparkles size={16} md:size={18}/></div>
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[#a3ff12] flex items-center justify-center text-black shadow-lg mb-3"><Sparkles className="w-4 h-4" /></div>
           <div>
             <p className="text-[#a3ff12] text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1">Previsão</p>
             <h2 className="text-lg md:text-2xl font-black text-white leading-tight">+R$ {(totalRecebido * 1.1).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</h2>
@@ -137,17 +137,17 @@ export default function Receitas() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 md:gap-8">
                 <div className="flex items-center gap-4 md:gap-6">
                   <div className="w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-[#a3ff12]/10 text-[#a3ff12] flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <DollarSign size={24} md:size={32} />
+                    <DollarSign className="w-[26px] h-[26px]" />
                   </div>
                   <div>
                     <h3 className="text-lg md:text-3xl font-black text-white tracking-tight">{item.descricao}</h3>
                     <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1 md:mt-2">
                       <div className="flex items-center gap-1.5 px-2 py-0.5 md:px-3 md:py-1 bg-white/5 rounded-md md:rounded-lg border border-white/5">
-                        <Tag size={10} md:size={12} className="text-[#a3ff12]" />
+                        <Tag className="w-3 h-3" />
                         <span className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{item.categoria}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-[8px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        <Calendar size={12} md:size={14} /> {new Date(item.data_recebimento).toLocaleDateString()}
+                        <Calendar className="w-3 h-3" /> {new Date(item.data_recebimento).toLocaleDateString()}
                       </div>
                     </div>
                   </div>

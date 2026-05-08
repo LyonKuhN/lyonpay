@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, CreditCard, DollarSign, TrendingUp, ShieldCheck, Settings, Save, Loader2, ArrowRight, Star } from 'lucide-react';
+import { Users, TrendingUp, ShieldCheck, Save, Loader2, ArrowRight, Star } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, PieChart, Shield, Zap, CheckCircle2, Loader2, Mail, LayoutDashboard, CreditCard, TrendingUp } from 'lucide-react';
+import { ArrowRight, Zap, Loader2, Mail, LayoutDashboard, CreditCard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 

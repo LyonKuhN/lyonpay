@@ -159,7 +159,7 @@ export default function Despesas() {
           </div>
         </div>
         <button onClick={() => { setForm(emptyForm); setRawAmount(''); setIsModalOpen(true); }} className="w-full md:w-auto flex items-center justify-center gap-3 px-6 md:px-8 py-4 md:py-5 bg-[#a3ff12] text-black font-black rounded-2xl md:rounded-[1.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl">
-          <Plus size={20} md:size={22} strokeWidth={3}/> NOVO LANÇAMENTO
+          <Plus className="w-5 h-5 md:w-6 md:h-6" strokeWidth={3}/> NOVO LANÇAMENTO
         </button>
       </header>
 
@@ -226,7 +226,7 @@ export default function Despesas() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4 md:gap-5">
                         <div className={`w-11 h-11 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 ${item.pago ? 'bg-[#a3ff12]/10 text-[#a3ff12]' : item._isGroup ? 'bg-[#FFD700]/10 text-[#FFD700]' : 'bg-white/5 text-zinc-500'}`}>
-                          <DollarSign size={20} className="md:w-[26px] md:h-[26px]"/>
+                          <DollarSign className="w-5 h-5 md:w-6 md:h-6"/>
                         </div>
                         <div className="min-w-0">
                           <h3 className="text-base md:text-lg font-black text-white truncate">{item._isGroup ? item.descricao.replace(/ \(\d+\/\d+\)$/, '') : item.descricao}</h3>
@@ -264,7 +264,7 @@ export default function Despesas() {
                           ) : (
                             <button onClick={e => { e.stopPropagation(); handleDelete(item.id); }}
                               className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-[#FF4D4D]/10 text-[#FF4D4D] hover:bg-[#FF4D4D] hover:text-white transition-all flex items-center justify-center active:scale-90">
-                              <Trash2 size={16} className="md:w-[18px] md:h-[18px]"/>
+                              <Trash2 className="w-4 h-4 md:w-5 md:h-5"/>
                             </button>
                           )}
                         </div>

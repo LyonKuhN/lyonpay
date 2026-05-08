@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowDownRight, Sparkles, TrendingUp, TrendingDown, Clock, PieChart, CreditCard, Loader2, Search, X, Calendar, DollarSign, ArrowRight, Tag } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Clock, PieChart, Loader2, Search, X, Calendar, ArrowRight, Tag } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
@@ -86,7 +86,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 mt-6 md:mt-10">
         <div className="flex items-center gap-3 md:gap-4">
           <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#a3ff12]/10 flex items-center justify-center border border-[#a3ff12]/20">
-            <Sparkles size={20} md:size={24} className="text-[#a3ff12]" />
+            <Sparkles className="w-5 h-5 text-[#a3ff12]" />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white tracking-tighter">Olá, {user?.name}</h1>
@@ -96,7 +96,7 @@ export default function Dashboard() {
 
         <div className="relative flex-1 max-w-xl w-full">
           <div className="absolute inset-y-0 left-5 md:left-6 flex items-center pointer-events-none">
-            <Search className="text-zinc-500" size={18} md:size={20} />
+            <Search className="text-zinc-500 w-5 h-5" />
           </div>
           <input 
             type="text" 
@@ -173,14 +173,14 @@ export default function Dashboard() {
               <p className="text-zinc-500 font-black text-[8px] md:text-[10px] uppercase tracking-widest mb-1 md:mb-2">Entradas</p>
               <p className="text-xl md:text-3xl font-black text-[#a3ff12] leading-tight">R$ {data.totalReceitas.toLocaleString('pt-BR')}</p>
             </div>
-            <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[#a3ff12]/5 flex items-center justify-center text-[#a3ff12]"><TrendingUp size={20} md:size={24}/></div>
+            <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[#a3ff12]/5 flex items-center justify-center text-[#a3ff12]"><TrendingUp className="w-5 h-5 md:w-6 md:h-6"/></div>
           </div>
           <div className="p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] bg-[#15151A] border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div>
               <p className="text-zinc-500 font-black text-[8px] md:text-[10px] uppercase tracking-widest mb-1 md:mb-2">Saídas</p>
               <p className="text-xl md:text-3xl font-black text-[#FF4D4D] leading-tight">R$ {data.totalDespesas.toLocaleString('pt-BR')}</p>
             </div>
-            <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[#FF4D4D]/5 flex items-center justify-center text-[#FF4D4D]"><TrendingDown size={20} md:size={24}/></div>
+            <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[#FF4D4D]/5 flex items-center justify-center text-[#FF4D4D]"><TrendingDown className="w-5 h-5"/></div>
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@ export default function Dashboard() {
               <div key={i} className="p-5 md:p-6 rounded-2xl md:rounded-[2.5rem] bg-[#15151A]/60 border border-white/5 hover:border-white/20 transition-all flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 md:gap-5 min-w-0">
                   <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${item.pago ? 'bg-[#a3ff12]/10 text-[#a3ff12]' : 'bg-[#FF4D4D]/10 text-[#FF4D4D]'}`}>
-                    <Calendar size={18} md:size={20} />
+                    <Calendar className="w-5 h-5 md:w-5 md:h-5" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-black text-white text-sm md:text-lg truncate">{item.descricao}</h4>

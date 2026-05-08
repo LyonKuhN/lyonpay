@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle2, AlertCircle, CreditCard, Loader2, ChevronLeft, ChevronRight, Zap, Info, Clock, ArrowUpRight, Check, History, LayoutGrid, RotateCcw, MessageCircle, AlertTriangle, ArrowRight, Hash, TrendingUp, DollarSign, Bookmark, Wallet, PieChart, Receipt, Layers, TrendingDown, ArrowUp, ArrowDown, Tag, X } from 'lucide-react';
+import { Calendar, CheckCircle2, Loader2, ChevronLeft, ChevronRight, Zap, Info, Check, RotateCcw, AlertTriangle, DollarSign, Tag, X, PieChart, Wallet, Layers, ArrowUp, ArrowDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
@@ -17,7 +17,7 @@ export default function Pagamentos() {
   const [prevMonthDespesas, setPrevMonthDespesas] = useState<any[]>([]);
   const [atrasadas, setAtrasadas] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [message, setMessage] = useState<{ text: string, type: 'success' | 'info' | 'error' } | null>(null);
+
   const [activeTab, setActiveTab] = useState<'pendentes' | 'pagas'>('pendentes');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -85,7 +85,7 @@ export default function Pagamentos() {
           method: 'PATCH',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) { fetchPagamentos(); fetchAtrasadas(); setMessage({ text: 'Liquidado!', type: 'success' }); setTimeout(() => setMessage(null), 3000); }
+        if (response.ok) { fetchPagamentos(); fetchAtrasadas(); }
       } catch (err) { console.error(err); setDespesas(prev => prev.map(d => d.id === id ? { ...d, isAnimating: false } : d)); }
     }, 400);
   };
@@ -98,7 +98,7 @@ export default function Pagamentos() {
           method: 'PATCH',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) { fetchPagamentos(); fetchAtrasadas(); setMessage({ text: 'Estornado!', type: 'info' }); setTimeout(() => setMessage(null), 3000); }
+        if (response.ok) { fetchPagamentos(); fetchAtrasadas(); }
       } catch (err) { console.error(err); setDespesas(prev => prev.map(d => d.id === id ? { ...d, isAnimating: false } : d)); }
     }, 400);
   };
@@ -118,9 +118,9 @@ export default function Pagamentos() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ month, year })
       });
-      if (response.ok) { fetchPagamentos(); setMessage({ text: 'Gerado!', type: 'success' }); }
+      if (response.ok) { fetchPagamentos(); }
     } catch (err) { console.error(err); }
-    finally { setGenerating(false); setTimeout(() => setMessage(null), 3000); }
+    finally { setGenerating(false); }
   };
 
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
@@ -150,7 +150,7 @@ export default function Pagamentos() {
       {atrasadas.length > 0 && (
         <div className="mb-8 p-5 md:p-6 bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 rounded-2xl md:rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_20px_50px_rgba(255,77,77,0.1)]">
           <div className="flex items-center gap-4 w-full md:w-auto">
-            <AlertTriangle className="text-[#FF4D4D] shrink-0" size={24} md:size={32} />
+            <AlertTriangle className="text-[#FF4D4D] shrink-0 w-6 h-6" />
             <div>
               <h3 className="text-white font-black text-sm md:text-base">Contas em atraso!</h3>
               <p className="text-zinc-500 text-[9px] md:text-xs font-bold uppercase tracking-widest">R$ {atrasadas.reduce((a,c)=>a+Number(c.valor),0).toLocaleString('pt-BR')} acumulados</p>
@@ -168,14 +168,14 @@ export default function Pagamentos() {
         </div>
         <div className="flex items-center justify-center md:justify-end gap-3 md:gap-4">
           <div className="flex items-center bg-[#15151A] border border-white/5 rounded-2xl p-1 shadow-2xl">
-            <button onClick={prevMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronLeft size={18} md:size={20}/></button>
+            <button onClick={prevMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5"/></button>
             <div className="px-3 md:px-4 text-center min-w-[100px] md:min-w-[120px]">
               <p className="text-xs md:text-sm font-black text-white capitalize">{monthName}</p>
             </div>
-            <button onClick={nextMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronRight size={18} md:size={20}/></button>
+            <button onClick={nextMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronRight className="w-5 h-5"/></button>
           </div>
-          <button onClick={() => setIsCalendarOpen(true)} className="p-3.5 md:p-4 bg-white/5 text-white border border-white/10 rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90"><Calendar size={18} md:size={20}/></button>
-          <button onClick={handleGerarFixas} disabled={generating} className="p-3.5 md:p-4 bg-[#a3ff12] text-black rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90 disabled:opacity-50"><Zap size={18} md:size={20}/></button>
+          <button onClick={() => setIsCalendarOpen(true)} className="p-3.5 md:p-4 bg-white/5 text-white border border-white/10 rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90"><Calendar className="w-5 h-5"/></button>
+          <button onClick={handleGerarFixas} disabled={generating} className="p-3.5 md:p-4 bg-[#a3ff12] text-black rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90 disabled:opacity-50"><Zap className="w-5 h-5"/></button>
         </div>
       </header>
 
@@ -237,13 +237,13 @@ export default function Pagamentos() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 md:gap-8">
                   <div className="flex items-center gap-4 md:gap-6">
                     <div className={`w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 ${conta.pago ? 'bg-[#a3ff12]/10 text-[#a3ff12]' : 'bg-[#FF4D4D]/10 text-[#FF4D4D]'}`}>
-                      {conta.pago ? <Check size={20} md:size={28}/> : <DollarSign size={20} md:size={28}/>}
+                      {conta.pago ? <Check className="w-4 h-4 md:w-5 md:h-5"/> : <DollarSign className="w-4 h-4 md:w-5 md:h-5"/>}
                     </div>
                     <div className="space-y-1 min-w-0">
                       <h3 className="text-base md:text-2xl font-black text-white tracking-tight truncate">{conta.descricao}</h3>
                       <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
                         <div className="flex items-center gap-1 px-1.5 py-0.5 md:px-2.5 md:py-0.5 bg-white/5 rounded border border-white/5">
-                          <Tag size={8} md:size={10} className="text-[#a3ff12]" />
+                          <Tag className="w-2.5 h-2.5" />
                           <span className="text-[7px] md:text-[9px] font-black text-zinc-400 uppercase tracking-widest">{conta.categoria || 'Outros'}</span>
                         </div>
                         {!conta.pago && <span className={`text-[8px] md:text-[9px] font-black uppercase ${rel.color}`}>{rel.text}</span>}
@@ -265,7 +265,7 @@ export default function Pagamentos() {
                     </div>
                     <div className="shrink-0">
                       {conta.pago ? (
-                        <button onClick={() => handleUndo(conta.id)} className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 text-zinc-500 hover:text-[#FFD700] transition-all flex items-center justify-center active:scale-90"><RotateCcw size={18} md:size={20} /></button>
+                        <button onClick={() => handleUndo(conta.id)} className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 text-zinc-500 hover:text-[#FFD700] transition-all flex items-center justify-center active:scale-90"><RotateCcw className="w-4.5 h-4.5 md:w-5 md:h-5" /></button>
                       ) : (
                         <button onClick={() => handlePagar(conta.id)} className="px-6 md:px-10 py-3 md:py-4 bg-white text-black font-black rounded-xl md:rounded-2xl text-[10px] md:text-xs hover:bg-[#a3ff12] active:scale-95 transition-all shadow-xl">PAGAR</button>
                       )}
