@@ -182,35 +182,171 @@ export default function Despesas() {
         </button>
       </header>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
-            {[
-              { label: 'Total Lançado', val: totalGeral, sub: `${despesas.length} registros`, Icon: PieChart, color: 'text-zinc-500', border: 'border-white/5' },
-              { label: 'A Pagar', val: totalPendente, sub: `${pendentes.length} pendentes`, Icon: Wallet, color: 'text-[#FF4D4D]', border: 'border-[#FF4D4D]/10' },
-              { label: 'Pago', val: totalPago, sub: `${pagas.length} liquidadas`, Icon: CheckCircle2, color: 'text-[#a3ff12]', border: 'border-[#a3ff12]/10' },
-              { label: 'Progresso', val: null, sub: null, Icon: Layers, color: 'text-zinc-500', border: 'border-white/5' },
-            ].map(({ label, val, sub, Icon, color, border }, i) => (
-              <div key={i} className={`p-4 md:p-6 rounded-2xl md:rounded-3xl bg-[#15151A] border ${border} shadow-xl flex flex-col justify-between`}>
-                <div>
-                  <div className={`w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center ${color} mb-3`}><Icon size={16}/></div>
-                  <p className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1 ${color}`}>{label}</p>
+      {/* ── Analytics Section ── */}
+      {viewMode === 'todas' && !loading && despesas.length > 0 && (() => {
+        // Cálculos analíticos
+        const fixas   = despesas.filter((d: any) => d.tipo === 'fixa' || d.tipo === 'fixo');
+        const parcela = despesas.filter((d: any) => d.tipo === 'parcelada' || d.tipo === 'parcelado');
+        const variav  = despesas.filter((d: any) => d.tipo === 'variavel' || d.tipo === 'variável' || (!d.tipo || (d.tipo !== 'fixa' && d.tipo !== 'fixo' && d.tipo !== 'parcelada' && d.tipo !== 'parcelado')));
+
+        const totalFixas   = fixas.reduce((a: number, c: any) => a + Number(c.valor), 0);
+        const totalParcela = parcela.reduce((a: number, c: any) => a + Number(c.valor), 0);
+        const totalVariav  = variav.reduce((a: number, c: any) => a + Number(c.valor), 0);
+
+        // Agrupamento por categoria
+        const catMap: Record<string, number> = {};
+        despesas.forEach((d: any) => {
+          const cat = d.categoria || 'Outros';
+          catMap[cat] = (catMap[cat] || 0) + Number(d.valor);
+        });
+        const catRanking = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+        const maxCatVal  = catRanking[0]?.[1] || 1;
+
+        // Top 5 maiores despesas individuais
+        const top5 = [...despesas].sort((a: any, b: any) => Number(b.valor) - Number(a.valor)).slice(0, 5);
+
+        const catColors = ['#a3ff12', '#FFD700', '#00D1FF', '#FF7A00', '#FF4D4D', '#9B59B6', '#2ECC71'];
+
+        return (
+          <div className="mb-10 space-y-6">
+
+            {/* KPI Cards — Tipo de despesa */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              {[
+                { label: 'Total Lançado',  val: totalGeral,    sub: `${despesas.length} registros`, color: '#a3ff12', bg: 'bg-[#a3ff12]/8',  Icon: PieChart },
+                { label: 'Contas Fixas',   val: totalFixas,    sub: `${fixas.length} fixas`,        color: '#00D1FF', bg: 'bg-[#00D1FF]/8', Icon: Bookmark },
+                { label: 'Parcelamentos',  val: totalParcela,  sub: `${parcela.length} parcelas`,   color: '#FFD700', bg: 'bg-[#FFD700]/8', Icon: Layers },
+                { label: 'Variáveis',      val: totalVariav,   sub: `${variav.length} lançamentos`, color: '#FF7A00', bg: 'bg-[#FF7A00]/8', Icon: Wallet },
+              ].map(({ label, val, sub, color, bg, Icon }, i) => (
+                <div key={i} className={`p-4 md:p-6 rounded-2xl md:rounded-3xl bg-[#15151A] border border-white/5 shadow-xl`}>
+                  <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`} style={{ color }}>
+                    <Icon size={16} />
+                  </div>
+                  <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1">{label}</p>
+                  <h2 className="text-base md:text-xl font-black text-white leading-tight">R$ {val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
+                  <p className="text-zinc-600 text-[8px] md:text-[9px] font-bold mt-1 uppercase">{sub}</p>
                 </div>
-                {val !== null ? (
-                  <div>
-                    <h2 className="text-base md:text-xl font-black text-white leading-tight">R$ {val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
-                    <p className="text-zinc-600 text-[8px] md:text-[9px] font-bold mt-1 uppercase truncate">{sub}</p>
-                  </div>
-                ) : (
-                  <div>
-                    <h2 className="text-base md:text-xl font-black text-white">{pct}%</h2>
-                    <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-[#a3ff12] transition-all" style={{ width: `${pct}%` }}/>
-                    </div>
-                  </div>
-                )}
+              ))}
+            </div>
+
+            {/* Progresso pago/pendente */}
+            <div className="p-4 md:p-6 rounded-2xl bg-[#15151A] border border-white/5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Progresso do Mês</p>
+                <p className="text-[#a3ff12] font-black text-sm">{pct}% pago</p>
               </div>
-            ))}
+              <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden mb-2">
+                <div className="h-full rounded-full bg-[#a3ff12] transition-all duration-1000" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="flex justify-between text-[8px] font-black text-zinc-600 uppercase tracking-widest">
+                <span>Pago: R$ {totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <span>Pendente: R$ {totalPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            {/* Duas colunas: Gráfico por categoria + Top 5 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* Gráfico de barras por categoria */}
+              <div className="p-5 md:p-6 rounded-2xl bg-[#15151A] border border-white/5">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="w-1.5 h-5 bg-[#a3ff12] rounded-full" />
+                  <p className="text-sm font-black text-white">Gasto por Categoria</p>
+                </div>
+                <div className="space-y-3">
+                  {catRanking.slice(0, 7).map(([cat, val], i) => {
+                    const pctCat = Math.round((Number(val) / maxCatVal) * 100);
+                    const col = catColors[i % catColors.length];
+                    return (
+                      <div key={cat}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: col }} />
+                            <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider truncate">{cat}</span>
+                          </div>
+                          <span className="text-[10px] font-black text-white ml-2 shrink-0">R$ {Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{ width: `${pctCat}%`, backgroundColor: col }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top 5 maiores despesas */}
+              <div className="p-5 md:p-6 rounded-2xl bg-[#15151A] border border-white/5">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="w-1.5 h-5 bg-[#FFD700] rounded-full" />
+                  <p className="text-sm font-black text-white">Maiores Gastos</p>
+                </div>
+                <div className="space-y-3">
+                  {top5.map((d: any, i: number) => {
+                    const pctTop = Math.round((Number(d.valor) / Number(top5[0].valor)) * 100);
+                    return (
+                      <div key={d.id} className="flex items-center gap-3">
+                        <span className="text-[9px] font-black text-zinc-600 w-4 shrink-0">#{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-black text-zinc-300 truncate">{d.descricao}</span>
+                            <span className="text-[10px] font-black text-white ml-2 shrink-0">R$ {Number(d.valor).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${pctTop}%`, backgroundColor: i === 0 ? '#FFD700' : i === 1 ? '#a3ff12' : '#00D1FF' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Divisão visual do orçamento (donut simulado com segmentos) */}
+            <div className="p-5 md:p-6 rounded-2xl bg-[#15151A] border border-white/5">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-1.5 h-5 bg-[#00D1FF] rounded-full" />
+                <p className="text-sm font-black text-white">Distribuição do Orçamento</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-5 rounded-full overflow-hidden flex">
+                  {totalFixas > 0 && (
+                    <div className="h-full bg-[#00D1FF] transition-all" style={{ width: `${(totalFixas / totalGeral) * 100}%` }} title={`Fixas: ${((totalFixas/totalGeral)*100).toFixed(0)}%`} />
+                  )}
+                  {totalParcela > 0 && (
+                    <div className="h-full bg-[#FFD700]" style={{ width: `${(totalParcela / totalGeral) * 100}%` }} title={`Parcelados: ${((totalParcela/totalGeral)*100).toFixed(0)}%`} />
+                  )}
+                  {totalVariav > 0 && (
+                    <div className="h-full bg-[#FF7A00]" style={{ width: `${(totalVariav / totalGeral) * 100}%` }} title={`Variáveis: ${((totalVariav/totalGeral)*100).toFixed(0)}%`} />
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 mt-3">
+                {[
+                  { label: 'Fixas',      val: totalFixas,    pct: totalGeral > 0 ? ((totalFixas/totalGeral)*100).toFixed(0) : '0',    col: '#00D1FF' },
+                  { label: 'Parcelados', val: totalParcela,  pct: totalGeral > 0 ? ((totalParcela/totalGeral)*100).toFixed(0) : '0',  col: '#FFD700' },
+                  { label: 'Variáveis',  val: totalVariav,   pct: totalGeral > 0 ? ((totalVariav/totalGeral)*100).toFixed(0) : '0',   col: '#FF7A00' },
+                ].map(s => (
+                  <div key={s.label} className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.col }} />
+                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{s.label}</span>
+                    <span className="text-[9px] font-black text-white">{s.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-px bg-white/5" />
           </div>
+        );
+      })()}
 
       {viewMode === 'modelos' && (
         <div className="mb-8 p-5 bg-[#FFD700]/10 border border-[#FFD700]/20 rounded-2xl flex items-center gap-3">
