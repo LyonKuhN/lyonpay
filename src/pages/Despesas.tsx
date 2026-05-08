@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Tag, Loader2, Bookmark, PieChart, Wallet, Layers, CheckCircle2, ChevronDown, Calculator, Edit2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Tag, Loader2, Bookmark, PieChart, Wallet, Layers, ChevronDown, Calculator, Edit2, Save, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
