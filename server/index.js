@@ -40,6 +40,12 @@ const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 const app = express();
 
+app.use(cors({
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 // --- SECURITY MIDDLEWARES ---
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -48,17 +54,11 @@ app.use(helmet({
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200, // Limite de 200 requisições por IP
+  max: 1000, // Aumentado para evitar bloqueios acidentais em produção
   message: { error: 'Muitas requisições vindas deste IP, tente novamente mais tarde.' }
 });
 
-app.use('/api/', limiter); // Aplica limite em todas as rotas da API
-
-app.use(cors({
-  origin: '*', // Permite todas as origens para facilitar o deploy inicial
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use('/api/', limiter); 
 app.use(express.json());
 
 app.use((req, res, next) => {
