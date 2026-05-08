@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0B0B0E;
+  --color-surface: #15151A;
+  --color-surfaceHighlight: #1F1F26;
+  --color-primary: #FFD700;
+  --color-accentGreen: #00FFA3;
+  --color-accentRed: #FF4D4D;
+  --color-textPrimary: #FFFFFF;
+  --color-textSecondary: #A1A1AA;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-textPrimary);
+  -webkit-font-smoothing: antialiased;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(21, 21, 26, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
