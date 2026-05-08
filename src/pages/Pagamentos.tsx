@@ -146,7 +146,19 @@ export default function Pagamentos() {
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
 
-  const pendentes = despesas.filter(d => !d.pago);
+  // Despesas atrasadas SOMENTE de meses anteriores ao mês visualizado
+  const atrasadasMesesAnteriores = atrasadas.filter((d: any) => {
+    const venc = new Date(d.data_vencimento);
+    return (
+      venc.getFullYear() < currentDate.getFullYear() ||
+      (venc.getFullYear() === currentDate.getFullYear() && venc.getMonth() < currentDate.getMonth())
+    );
+  });
+
+  // Pendentes do mês atual ordenados por data de vencimento (crescente)
+  const pendentes = despesas
+    .filter(d => !d.pago)
+    .sort((a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
   const pagas = despesas.filter(d => d.pago);
   
   const totalCurr = despesas.reduce((a, c) => a + Number(c.valor), 0);
@@ -166,17 +178,46 @@ export default function Pagamentos() {
   return (
     <div className="animate-in fade-in duration-700 max-w-6xl mx-auto pt-4 pb-20 px-4 md:px-6">
       
-      {/* Alert Overdue Banner */}
-      {atrasadas.length > 0 && (
-        <div className="mb-8 p-5 md:p-6 bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 rounded-2xl md:rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_20px_50px_rgba(255,77,77,0.1)]">
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <AlertTriangle className="text-[#FF4D4D] shrink-0 w-6 h-6" />
+      {/* Espelho de Atrasos de Meses Anteriores */}
+      {atrasadasMesesAnteriores.length > 0 && (
+        <div className="mb-10 space-y-3">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-2 h-6 bg-[#FF4D4D] rounded-full" />
             <div>
-              <h3 className="text-white font-black text-sm md:text-base">Contas em atraso!</h3>
-              <p className="text-zinc-500 text-[9px] md:text-xs font-bold uppercase tracking-widest">R$ {atrasadas.reduce((a,c)=>a+Number(c.valor),0).toLocaleString('pt-BR')} acumulados</p>
+              <h2 className="text-white font-black text-base md:text-lg tracking-tight">Espelho de Atrasos</h2>
+              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">
+                {atrasadasMesesAnteriores.length} conta{atrasadasMesesAnteriores.length > 1 ? 's' : ''} pendente{atrasadasMesesAnteriores.length > 1 ? 's' : ''} de meses anteriores ·
+                Total: <span className="text-[#FF4D4D]">R$ {atrasadasMesesAnteriores.reduce((a, c) => a + Number(c.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </p>
             </div>
           </div>
-          <button onClick={() => { const d = new Date(atrasadas[0].data_vencimento); setCurrentDate(new Date(d.getFullYear(), d.getMonth())); }} className="w-full md:w-auto px-6 py-3 bg-[#FF4D4D] text-white font-black rounded-xl text-[9px] md:text-[10px] hover:scale-105 active:scale-95 transition-all">VER ATRASOS</button>
+          {atrasadasMesesAnteriores.map((conta: any) => {
+            const overdueDays = Math.abs(Math.ceil((new Date(conta.data_vencimento).getTime() - new Date().setHours(0,0,0,0)) / 86400000));
+            return (
+              <div key={conta.id} className="p-4 md:p-5 rounded-2xl bg-[#FF4D4D]/5 border border-[#FF4D4D]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#FF4D4D]/40 transition-all">
+                <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF4D4D]/10 text-[#FF4D4D] flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black text-white truncate">{conta.descricao}</h3>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      <span className="text-[8px] font-black text-[#FF4D4D] uppercase tracking-widest">Atrasado {overdueDays} dia{overdueDays !== 1 ? 's' : ''}</span>
+                      <span className="text-[8px] font-black text-zinc-600 uppercase">· Venc. {formatDate(conta.data_vencimento)}</span>
+                      {conta.categoria && <span className="text-[8px] font-black text-zinc-500 uppercase">{conta.categoria}</span>}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                  <p className="text-lg md:text-2xl font-black text-white">R$ {Number(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <button onClick={() => handlePagar(conta.id)} className="px-5 py-2.5 bg-[#FF4D4D] text-white font-black rounded-xl text-[10px] hover:bg-[#FF4D4D]/90 active:scale-95 transition-all shadow-lg">
+                    PAGAR
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <div className="h-px bg-white/5 mt-6" />
         </div>
       )}
 

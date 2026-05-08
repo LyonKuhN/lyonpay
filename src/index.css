@@ -25,3 +25,126 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* =====================================================
+   LIGHT MODE OVERRIDES
+   Substitui os cards/backgrounds escuros por tons claros
+   ===================================================== */
+html.light {
+  --color-background: #F4F5F7;
+  --color-surface: #FFFFFF;
+  --color-textPrimary: #111827;
+  --color-textSecondary: #6B7280;
+}
+
+html.light body {
+  background-color: #F4F5F7;
+  color: #111827;
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Cards escuros → brancos */
+html.light .bg-\[\#09090B\],
+html.light .bg-\[\#0D0D12\],
+html.light .bg-\[\#15151A\],
+html.light .bg-\[\#1C1C21\],
+html.light .bg-\[\#1e1e24\],
+html.light .bg-\[\#1a1a20\] {
+  background-color: #FFFFFF !important;
+}
+
+html.light .bg-\[\#15151A\]\/80,
+html.light .bg-\[\#15151A\]\/60,
+html.light .bg-\[\#15151A\]\/20,
+html.light .bg-\[\#09090B\]\/80,
+html.light .bg-\[\#15151A\]\/50,
+html.light .bg-\[\#15151A\]\/30 {
+  background-color: rgba(255,255,255,0.9) !important;
+}
+
+/* Texto branco → escuro */
+html.light .text-white {
+  color: #111827 !important;
+}
+
+/* Textos cinza → mais legíveis */
+html.light .text-zinc-500,
+html.light .text-zinc-400,
+html.light .text-zinc-600,
+html.light .text-zinc-700 {
+  color: #6B7280 !important;
+}
+
+html.light .text-zinc-300 {
+  color: #374151 !important;
+}
+
+/* Bordas sutis */
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20 {
+  border-color: rgba(0,0,0,0.07) !important;
+}
+
+html.light .border-white\/\[0\.05\] {
+  border-color: rgba(0,0,0,0.07) !important;
+}
+
+/* Backgrounds brancos semitransparentes */
+html.light .bg-white\/5 {
+  background-color: rgba(0,0,0,0.04) !important;
+}
+
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.01\] {
+  background-color: rgba(0,0,0,0.02) !important;
+}
+
+/* Gradientes dos cards escuros */
+html.light .from-\[\#1C1C21\],
+html.light .to-\[\#0D0D12\] {
+  --tw-gradient-from: #FFFFFF !important;
+  --tw-gradient-to: #F0F2F5 !important;
+}
+
+html.light .from-\[\#09090B\] {
+  --tw-gradient-from: #F4F5F7 !important;
+}
+
+/* FloatingNav light */
+html.light nav.glass {
+  background: rgba(255,255,255,0.92) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08) !important;
+}
+
+html.light nav .text-zinc-400 {
+  color: #4B5563 !important;
+}
+
+/* Input fields */
+html.light input[type="text"],
+html.light input[type="email"],
+html.light input[type="password"] {
+  background-color: #F4F5F7 !important;
+  border-color: rgba(0,0,0,0.1) !important;
+  color: #111827 !important;
+}
+
+html.light input::placeholder {
+  color: #9CA3AF !important;
+}
+
+/* Scrollbar */
+html.light ::-webkit-scrollbar-track {
+  background: #F4F5F7;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+}

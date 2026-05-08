@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Receipt, Wallet, Settings, CreditCard, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, Wallet, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck } from 'lucide-react';
 import Landing from './pages/Landing';
 import Verify from './pages/Verify';
 import Dashboard from './pages/Dashboard';
@@ -9,11 +9,13 @@ import Pagamentos from './pages/Pagamentos';
 import Config from './pages/Config';
 import Admin from './pages/Admin';
 import { useAuth } from './contexts/AuthContext';
-import { ShieldCheck } from 'lucide-react';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 function FloatingNav() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+
   const links = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Receitas', path: '/receitas', icon: Wallet },
@@ -42,8 +44,8 @@ function FloatingNav() {
                 key={link.name}
                 to={link.path}
                 className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
-                  isActive 
-                    ? 'bg-white/10 text-white shadow-lg' 
+                  isActive
+                    ? 'bg-white/10 text-white shadow-lg'
                     : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -55,10 +57,18 @@ function FloatingNav() {
         </div>
 
         <div className="pl-2 md:pl-4 ml-1 md:ml-2 border-l border-white/5 flex items-center gap-1 md:gap-2 shrink-0">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
+            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          >
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
           <Link to="/config" className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all">
             <Settings size={18} />
           </Link>
-          <button 
+          <button
             onClick={logout}
             className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-[#FF4D4D]/70 hover:text-[#FF4D4D] hover:bg-[#FF4D4D]/10 transition-all"
           >
@@ -71,16 +81,22 @@ function FloatingNav() {
 }
 
 function PrivateRoute({ children, allowExpired = false }: { children: React.ReactNode, allowExpired?: boolean }) {
-  const { isAuthenticated, user } = useAuth();
-  
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  // Aguarda a verificação do localStorage antes de redirecionar
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-2 border-[#a3ff12] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) return <Navigate to="/" />;
 
-  // Se não for admin e a assinatura expirou, bloqueia (exceto se explicitamente permitido, como na tela de Config)
   if (user && user.role !== 'admin' && !allowExpired) {
     const isExpired = user.expires_at ? new Date(user.expires_at) < new Date() : true;
-    if (isExpired) {
-      return <Navigate to="/config?expired=true" />;
-    }
+    if (isExpired) return <Navigate to="/config?expired=true" />;
   }
 
   return <>{children}</>;
@@ -89,12 +105,13 @@ function PrivateRoute({ children, allowExpired = false }: { children: React.Reac
 function AppLayout() {
   const location = useLocation();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const isLanding = location.pathname === '/';
 
   return (
-    <div className={`min-h-screen bg-[#09090B] text-white selection:bg-[#a3ff12] selection:text-black font-sans relative overflow-x-hidden`}>
-      
-      {!isLanding && (
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#09090B] text-white' : 'bg-gray-50 text-gray-900'} selection:bg-[#a3ff12] selection:text-black font-sans relative overflow-x-hidden transition-colors duration-300`}>
+
+      {!isLanding && theme === 'dark' && (
         <>
           <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#a3ff12]/5 blur-[150px] rounded-full pointer-events-none" />
           <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#FFD700]/5 blur-[150px] rounded-full pointer-events-none" />
@@ -102,7 +119,7 @@ function AppLayout() {
       )}
 
       {!isLanding && <FloatingNav />}
-      
+
       <main className={`${isLanding ? '' : 'pt-24 md:pt-32 pb-20 px-4 max-w-6xl mx-auto'} relative z-10 min-h-screen`}>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -121,9 +138,11 @@ function AppLayout() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppLayout />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
