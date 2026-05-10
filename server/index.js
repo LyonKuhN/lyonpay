@@ -7,11 +7,13 @@ const __dirname = path.dirname(__filename);
 const envPath = path.join(__dirname, '..', '.env');
 dotenv.config({ path: envPath });
 
-console.log('--- DEBUG ENV ---');
-console.log('Path:', envPath);
-console.log('Stripe Key Length:', process.env.STRIPE_SECRET_KEY?.length || 0);
-console.log('Resend Key Length:', process.env.RESEND_API_KEY?.length || 0);
-console.log('------------------');
+// Log de depuração mais limpo
+console.log('--- [SISTEMA] Verificação de Variáveis ---');
+console.log('Ambiente:', process.env.NODE_ENV || 'development');
+console.log('Resend Key:', process.env.RESEND_API_KEY ? '✅ Configurada' : '❌ AUSENTE');
+console.log('Email From:', process.env.EMAIL_FROM ? `✅ (${process.env.EMAIL_FROM})` : '❌ AUSENTE');
+console.log('Frontend URL:', process.env.SERVICE_FQDN_LYONPAY_WEB || 'Não definida (usando localhost)');
+console.log('---------------------------------------');
 
 process.on('uncaughtException', (err) => {
   console.error('!!! ERRO CRÍTICO (Uncaught):', err);
@@ -39,6 +41,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 const app = express();
+
+// Necessário para o Coolify/Docker (Proxy Reverso) identificar o IP real do usuário
+app.set('trust proxy', 1);
 
 app.use(cors({
   origin: '*', 
