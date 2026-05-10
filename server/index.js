@@ -157,6 +157,24 @@ app.post('/api/auth/register', async (req, res) => {
       [user.id, email, 'trial', expiresAt]
     );
 
+    // Categorias padrão para o usuário
+    const defaultCategories = [
+      { nome: 'Moradia', cor: '#00D1FF', tipo: 'despesa', icone: 'Tag' },
+      { nome: 'Transporte', cor: '#FFD700', tipo: 'despesa', icone: 'Tag' },
+      { nome: 'Alimentação', cor: '#FF7A00', tipo: 'despesa', icone: 'Tag' },
+      { nome: 'Saúde', cor: '#FF4D4D', tipo: 'despesa', icone: 'Tag' },
+      { nome: 'Educação', cor: '#9B59B6', tipo: 'despesa', icone: 'Tag' },
+      { nome: 'Lazer', cor: '#a3ff12', tipo: 'despesa', icone: 'Tag' },
+      { nome: 'Salário', cor: '#a3ff12', tipo: 'receita', icone: 'Tag' }
+    ];
+
+    for (const cat of defaultCategories) {
+      await pool.query(
+        'INSERT INTO public.categorias (user_id, nome, tipo, cor, icone) VALUES ($1, $2, $3, $4, $5)',
+        [user.id, cat.nome, cat.tipo, cat.cor, cat.icone]
+      );
+    }
+
     await sendConfirmationEmail(email, name, confirmationToken);
     res.json({ message: 'Cadastro realizado. Verifique seu e-mail.' });
   } catch (err) { 
@@ -474,6 +492,10 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
     const config = await pool.query("SELECT value FROM public.config WHERE key = 'monthly_fee'");
     const fee = parseFloat(config.rows[0]?.value || '17.90');
 
+    const frontendUrl = process.env.SERVICE_FQDN_LYONPAY_WEB 
+      ? `https://${process.env.SERVICE_FQDN_LYONPAY_WEB}` 
+      : 'http://localhost:5173';
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
@@ -486,8 +508,8 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
         quantity: 1,
       }],
       mode: 'subscription',
-      success_url: 'http://localhost:5173/config?success=true',
-      cancel_url: 'http://localhost:5173/config?canceled=true',
+      success_url: `${frontendUrl}/config?success=true`,
+      cancel_url: `${frontendUrl}/config?canceled=true`,
       customer_email: req.user.email,
       metadata: { user_id: req.user.id }
     });

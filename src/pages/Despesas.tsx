@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Tag, Loader2, Bookmark, PieChart, Wallet, Layers, ChevronDown, Calculator, Edit2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Tag, Loader2, Bookmark, PieChart, Wallet, Layers, ChevronDown, Calculator, Edit2, Save, X, Search, Filter, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
@@ -22,6 +22,11 @@ export default function Despesas() {
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'todas' | 'modelos'>('todas');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Filtros
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
 
   // Estado para controlar se o valor inserido é o total ou da parcela
   const [parcelInputMode, setParcelInputMode] = useState<'parcela' | 'total'>('parcela');
@@ -138,6 +143,17 @@ export default function Despesas() {
     } catch (err) { console.error(err); }
   };
 
+  const handleTogglePago = async (id: string, isPago: boolean) => {
+    try {
+      const endpoint = isPago ? 'pendente' : 'pagar';
+      const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/${endpoint}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) fetchData();
+    } catch (err) { console.error(err); }
+  };
+
   const toggleGroup = (key: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
@@ -163,7 +179,51 @@ export default function Despesas() {
     }
   }
   const despesasAgrupadas = Object.values(grouped);
-  const displayList = viewMode === 'todas' ? despesasAgrupadas : modelos;
+  let baseList = viewMode === 'todas' ? despesasAgrupadas : modelos;
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    baseList = baseList.filter(d => 
+      d.descricao?.toLowerCase().includes(q) || 
+      d.observacoes?.toLowerCase().includes(q) ||
+      (d._isGroup && d._items.some((p: any) => p.observacoes?.toLowerCase().includes(q))) ||
+      (d.valor && d.valor.toString().includes(q))
+    );
+  }
+  if (filterCategoria) {
+    baseList = baseList.filter(d => d.categoria === filterCategoria);
+  }
+  if (filterTipo) {
+    baseList = baseList.filter(d => {
+      if (d._isGroup) return filterTipo === 'parcelada' || filterTipo === 'parcelado';
+      const t = d.tipo?.toLowerCase();
+      return t === filterTipo || (filterTipo === 'fixa' && t === 'fixo') || (filterTipo === 'parcelada' && t === 'parcelado');
+    });
+  }
+
+  const displayList = baseList;
+
+  let groupedInstallments: any[] = [];
+  let otherExpenses: any[] = [];
+  const byYearMonth: Record<string, Record<string, any[]>> = {};
+
+  if (viewMode === 'todas') {
+    groupedInstallments = displayList.filter(d => d._isGroup);
+    otherExpenses = displayList.filter(d => !d._isGroup);
+
+    for (const exp of otherExpenses) {
+      let year = "Sem Data";
+      let month = "00";
+      if (exp.data_vencimento) {
+        const d = new Date(exp.data_vencimento);
+        year = d.getFullYear().toString();
+        month = (d.getMonth() + 1).toString().padStart(2, '0');
+      }
+      if (!byYearMonth[year]) byYearMonth[year] = {};
+      if (!byYearMonth[year][month]) byYearMonth[year][month] = [];
+      byYearMonth[year][month].push(exp);
+    }
+  }
 
   return (
     <div className="animate-in fade-in duration-700 max-w-6xl mx-auto pt-4 pb-20 px-4 md:px-6">
@@ -171,7 +231,9 @@ export default function Despesas() {
       {/* Header */}
       <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8">
         <div className="text-left">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-white mb-3 md:mb-4">Despesas</h1>
+          <div className="flex flex-col md:flex-row md:items-center gap-4 mb-3 md:mb-4">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-white">Despesas</h1>
+          </div>
           <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar pb-1 md:pb-0">
             <button onClick={() => setViewMode('todas')} className={`whitespace-nowrap text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full transition-all ${viewMode === 'todas' ? 'bg-[#a3ff12] text-black shadow-[0_0_15px_rgba(163,255,18,0.3)]' : 'text-zinc-500 bg-white/5 hover:text-white'}`}>Lançamentos</button>
             <button onClick={() => setViewMode('modelos')} className={`whitespace-nowrap text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full transition-all ${viewMode === 'modelos' ? 'bg-[#FFD700] text-black shadow-[0_0_15px_rgba(255,215,0,0.3)]' : 'text-zinc-500 bg-white/5 hover:text-white'}`}>Modelos Fixos</button>
@@ -355,16 +417,69 @@ export default function Despesas() {
         </div>
       )}
 
+      {/* Filtros */}
+      <div className="mb-6 flex flex-col md:flex-row gap-4 bg-[#15151A] p-4 rounded-2xl border border-white/5">
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+          <input 
+            type="text" 
+            placeholder="Buscar por descrição, valor ou observação..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+            <select 
+              value={filterCategoria} 
+              onChange={(e) => setFilterCategoria(e.target.value)}
+              className="w-full sm:w-auto min-w-[160px] bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
+            >
+              <option value="">Todas as Categorias</option>
+              {categorias.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+            <select 
+              value={filterTipo} 
+              onChange={(e) => setFilterTipo(e.target.value)}
+              className="w-full sm:w-auto min-w-[160px] bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
+            >
+              <option value="">Todos os Tipos</option>
+              <option value="variavel">Variável</option>
+              <option value="fixa">Fixa</option>
+              <option value="parcelada">Parcelada</option>
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+          </div>
+        </div>
+      </div>
+
       {/* List */}
       <div className="space-y-6">
-        {loading ? (
-          <div className="py-32 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={40}/></div>
-        ) : displayList.length === 0 ? (
-          <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] text-zinc-500 font-black uppercase tracking-widest text-xs">Nenhum item</div>
-        ) : (
-          displayList.map((item: any) => {
+        {(() => {
+          if (loading) return <div className="py-32 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={40}/></div>;
+          if (displayList.length === 0) return <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] text-zinc-500 font-black uppercase tracking-widest text-xs">Nenhum item</div>;
+
+          const renderCard = (item: any) => {
             const mapKey = item._key ?? item.id;
             const isExpanded = expandedGroups.has(mapKey);
+            
+            let paidParcels = 0, totalParcels = 1, paidValue = 0, totalValue = 0, lastDate = '';
+            if (item._isGroup) {
+              const items = item._items || [];
+              totalParcels = item.numero_parcelas || items.length;
+              paidParcels = items.filter((p: any) => p.pago).length;
+              totalValue = items.reduce((a: number, p: any) => a + Number(p.valor), 0);
+              paidValue = items.filter((p: any) => p.pago).reduce((a: number, p: any) => a + Number(p.valor), 0);
+              const sorted = [...items].sort((a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
+              if (sorted.length > 0) lastDate = sorted[sorted.length - 1].data_vencimento;
+            }
+
             return (
               <div key={mapKey}>
                 <div className="relative">
@@ -426,12 +541,30 @@ export default function Despesas() {
                           ) : (
                             <div className="flex items-center gap-2 justify-end group/edit">
                               {!item.pago && !item._isGroup && (
+                                <>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); handleTogglePago(item.id, false); }}
+                                    className="p-1.5 text-zinc-600 hover:text-[#a3ff12] transition-all bg-white/5 rounded-lg mr-1"
+                                    title="Marcar como pago"
+                                  >
+                                    <Check size={12} strokeWidth={4} />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingValue(item.valor.toString()); }}
+                                    className="p-1.5 text-zinc-600 hover:text-white transition-all bg-white/5 rounded-lg"
+                                    title="Editar valor"
+                                  >
+                                    <Edit2 size={12} />
+                                  </button>
+                                </>
+                              )}
+                              {item.pago && !item._isGroup && (
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingValue(item.valor.toString()); }}
-                                  className="p-1.5 text-zinc-600 hover:text-[#a3ff12] transition-all bg-white/5 rounded-lg"
-                                  title="Editar valor"
+                                  onClick={(e) => { e.stopPropagation(); handleTogglePago(item.id, true); }}
+                                  className="p-1.5 text-[#a3ff12] hover:text-[#FF4D4D] transition-all bg-[#a3ff12]/10 rounded-lg mr-1 group-hover/edit:opacity-100 opacity-50"
+                                  title="Desfazer pagamento"
                                 >
-                                  <Edit2 size={12} />
+                                  <Check size={12} strokeWidth={4} />
                                 </button>
                               )}
                               <p className={`text-xl md:text-2xl font-black tracking-tighter ${item.pago ? 'text-[#a3ff12]' : 'text-white'}`}>
@@ -455,6 +588,38 @@ export default function Despesas() {
                         </div>
                       </div>
                     </div>
+                    
+                    {item._isGroup && (
+                      <div className="mt-5 pt-5 border-t border-white/5">
+                        <div className="flex justify-between items-center mb-2">
+                           <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Progresso do Parcelamento</span>
+                           <span className="text-[10px] font-black text-[#FFD700]">{totalValue > 0 ? Math.round((paidValue / totalValue) * 100) : 0}% Pago</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
+                           <div className="h-full bg-[#FFD700] rounded-full transition-all duration-1000" style={{ width: `${totalValue > 0 ? (paidValue / totalValue) * 100 : 0}%` }} />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+                           <div className="flex items-center gap-1.5">
+                             <div className="w-1.5 h-1.5 rounded-full bg-[#a3ff12]"></div>
+                             Pagas: <span className="text-white">{paidParcels}/{totalParcels}</span>
+                           </div>
+                           <div className="flex items-center gap-1.5">
+                             <div className="w-1.5 h-1.5 rounded-full bg-[#FFD700]"></div>
+                             Restam: <span className="text-white">{totalParcels - paidParcels} parcelas</span>
+                           </div>
+                           <div className="flex items-center gap-1.5">
+                             <div className="w-1.5 h-1.5 rounded-full bg-[#00D1FF]"></div>
+                             Falta Pagar: <span className="text-white">R$ {(totalValue - paidValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                           </div>
+                           {lastDate && (
+                             <div className="flex items-center gap-1.5">
+                               <Calendar size={10} className="text-zinc-400"/>
+                               Última em: <span className="text-white">{formatDate(lastDate)}</span>
+                             </div>
+                           )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -463,8 +628,10 @@ export default function Despesas() {
                     {[...item._items].sort((a: any, b: any) => a.parcela_atual - b.parcela_atual).map((p: any) => (
                       <div key={p.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${p.pago ? 'bg-[#a3ff12]/5 border-[#a3ff12]/20' : 'bg-black/30 border-white/5'}`}>
                         <div className="flex items-center gap-4">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black ${p.pago ? 'bg-[#a3ff12] text-black' : 'bg-white/5 text-zinc-500'}`}>
-                            {p.parcela_atual}
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black cursor-pointer transition-all ${p.pago ? 'bg-[#a3ff12] text-black hover:bg-[#FF4D4D] hover:text-white' : 'bg-white/5 text-zinc-500 hover:bg-[#a3ff12] hover:text-black'}`}
+                               onClick={(e) => { e.stopPropagation(); handleTogglePago(p.id, p.pago); }}
+                               title={p.pago ? "Desfazer pagamento" : "Marcar como pago"}>
+                            {p.pago ? <Check size={14} strokeWidth={4} /> : p.parcela_atual}
                           </div>
                           <div>
                             <span className="text-sm font-black text-white">Parcela {p.parcela_atual}/{p.numero_parcelas}</span>
@@ -489,8 +656,50 @@ export default function Despesas() {
                 )}
               </div>
             );
-          })
-        )}
+          };
+
+          if (viewMode === 'modelos') return displayList.map(item => renderCard(item));
+
+          return (
+            <div className="space-y-8">
+              {groupedInstallments.length > 0 && (
+                <div className="space-y-4">
+                  {groupedInstallments.map(item => renderCard(item))}
+                </div>
+              )}
+
+              {Object.keys(byYearMonth).sort((a,b) => b.localeCompare(a)).map(year => (
+                <div key={`year-${year}`} className="bg-[#15151A] rounded-[2rem] border border-white/5 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                  <button onClick={() => toggleGroup(`year-${year}`)} className="w-full p-6 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                    <span className="text-2xl font-black text-white tracking-tighter">Ano <span className="text-[#a3ff12]">{year}</span></span>
+                    <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-transform duration-300 group-hover:bg-white/10 ${expandedGroups.has(`year-${year}`) ? 'rotate-180' : ''}`}>
+                      <ChevronDown size={20} className="text-zinc-400" />
+                    </div>
+                  </button>
+                  {expandedGroups.has(`year-${year}`) && (
+                    <div className="border-t border-white/5 bg-black/20 p-4 md:p-6 space-y-4">
+                      {Object.keys(byYearMonth[year]).sort((a,b) => b.localeCompare(a)).map(month => (
+                        <div key={`month-${year}-${month}`} className="bg-[#15151A] rounded-[1.5rem] border border-white/5 shadow-lg overflow-hidden">
+                          <button onClick={() => toggleGroup(`month-${year}-${month}`)} className="w-full p-5 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <span className="text-sm font-black text-white uppercase tracking-widest">Mês <span className="text-[#FFD700]">{month}</span></span>
+                            <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center transition-transform duration-300 group-hover:bg-white/10 ${expandedGroups.has(`month-${year}-${month}`) ? 'rotate-180' : ''}`}>
+                              <ChevronDown size={16} className="text-zinc-500" />
+                            </div>
+                          </button>
+                          {expandedGroups.has(`month-${year}-${month}`) && (
+                            <div className="border-t border-white/5 p-4 md:p-6 space-y-4 bg-[#111115]">
+                              {byYearMonth[year][month].map(item => renderCard(item))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {isModalOpen && (

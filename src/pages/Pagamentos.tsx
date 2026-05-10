@@ -160,7 +160,7 @@ export default function Pagamentos() {
     .filter(d => !d.pago)
     .sort((a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
   const pagas = despesas.filter(d => d.pago);
-  
+
   const totalCurr = despesas.reduce((a, c) => a + Number(c.valor), 0);
   const totalPrev = prevMonthDespesas.reduce((a, c) => a + Number(c.valor), 0);
   const diffTotal = calculateDiff(totalCurr, totalPrev);
@@ -177,7 +177,7 @@ export default function Pagamentos() {
 
   return (
     <div className="animate-in fade-in duration-700 max-w-6xl mx-auto pt-4 pb-20 px-4 md:px-6">
-      
+
       {/* Espelho de Atrasos de Meses Anteriores */}
       {atrasadasMesesAnteriores.length > 0 && (
         <div className="mb-10 space-y-3">
@@ -192,7 +192,7 @@ export default function Pagamentos() {
             </div>
           </div>
           {atrasadasMesesAnteriores.map((conta: any) => {
-            const overdueDays = Math.abs(Math.ceil((new Date(conta.data_vencimento).getTime() - new Date().setHours(0,0,0,0)) / 86400000));
+            const overdueDays = Math.abs(Math.ceil((new Date(conta.data_vencimento).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000));
             return (
               <div key={conta.id} className="p-4 md:p-5 rounded-2xl bg-[#FF4D4D]/5 border border-[#FF4D4D]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#FF4D4D]/40 transition-all">
                 <div className="flex items-center gap-3 md:gap-4 min-w-0">
@@ -227,16 +227,21 @@ export default function Pagamentos() {
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white">Pagamentos</h1>
           <p className="text-zinc-500 font-bold uppercase text-[8px] md:text-[10px] tracking-[0.3em] md:tracking-[0.4em]">{monthName} {currentDate.getFullYear()}</p>
         </div>
-        <div className="flex items-center justify-center md:justify-end gap-3 md:gap-4">
-          <div className="flex items-center bg-[#15151A] border border-white/5 rounded-2xl p-1 shadow-2xl">
-            <button onClick={prevMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5"/></button>
-            <div className="px-3 md:px-4 text-center min-w-[100px] md:min-w-[120px]">
+        <div className="flex flex-col sm:flex-row items-center justify-center md:justify-end gap-3 md:gap-4 w-full md:w-auto">
+          <div className="flex items-center justify-between w-full sm:w-auto bg-[#15151A] border border-white/5 rounded-2xl p-1 shadow-2xl">
+            <button onClick={prevMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
+            <div className="px-3 md:px-4 text-center flex-1 sm:flex-none min-w-[100px] md:min-w-[120px]">
               <p className="text-xs md:text-sm font-black text-white capitalize">{monthName}</p>
             </div>
-            <button onClick={nextMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronRight className="w-5 h-5"/></button>
+            <button onClick={nextMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronRight className="w-5 h-5" /></button>
           </div>
-          <button onClick={() => setIsCalendarOpen(true)} className="p-3.5 md:p-4 bg-white/5 text-white border border-white/10 rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90"><Calendar className="w-5 h-5"/></button>
-          <button onClick={handleGerarFixas} disabled={generating} className="p-3.5 md:p-4 bg-[#a3ff12] text-black rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90 disabled:opacity-50"><Zap className="w-5 h-5"/></button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button onClick={() => setIsCalendarOpen(true)} className="flex items-center justify-center p-3.5 md:p-4 bg-white/5 text-white border border-white/10 rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90 shrink-0"><Calendar className="w-5 h-5" /></button>
+            <button onClick={handleGerarFixas} disabled={generating} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3.5 md:px-5 md:py-4 bg-[#a3ff12] text-black rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50">
+              <Zap className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
+              <span className="font-black text-[9px] md:text-[10px] uppercase tracking-widest whitespace-nowrap">Gerar Despesas Fixas</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -250,10 +255,10 @@ export default function Pagamentos() {
         ].map((item, i) => (
           <div key={i} className={`p-4 md:p-6 rounded-2xl md:rounded-3xl bg-[#15151A] border ${item.border} shadow-xl flex flex-col justify-between`}>
             <div className="flex items-center justify-between mb-3">
-              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center ${item.color}`}><item.Icon size={16}/></div>
+              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center ${item.color}`}><item.Icon size={16} /></div>
               {item.diff !== null && (
                 <div className={`flex items-center gap-1 text-[8px] md:text-[10px] font-black ${item.diff > 0 ? (i === 2 ? 'text-[#a3ff12]' : 'text-[#FF4D4D]') : (i === 2 ? 'text-zinc-500' : 'text-[#a3ff12]')}`}>
-                  {item.diff > 0 ? <ArrowUp size={10}/> : <ArrowDown size={10}/>} {Math.abs(Math.round(item.diff))}%
+                  {item.diff > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />} {Math.abs(Math.round(item.diff))}%
                 </div>
               )}
             </div>
@@ -285,20 +290,20 @@ export default function Pagamentos() {
       {/* List */}
       <div className="space-y-4">
         {loading ? (
-          <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={32}/></div>
+          <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={32} /></div>
         ) : (activeTab === 'pendentes' ? pendentes : pagas).length === 0 ? (
           <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem] text-zinc-500 font-black uppercase tracking-widest text-xs">Tudo liquidado!</div>
         ) : (
           (activeTab === 'pendentes' ? pendentes : pagas).map((conta) => {
             const rel = getRelativeTime(conta.data_vencimento);
             const shouldShowParcela = conta.parcela_atual && conta.numero_parcelas > 1;
-            
+
             return (
               <div key={conta.id} className={`p-5 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border transition-all duration-500 ${conta.isAnimating ? 'opacity-0 translate-x-10 scale-95' : 'opacity-100'} ${conta.pago ? 'bg-white/[0.02] border-white/5' : 'bg-[#15151A] border-white/10 shadow-2xl hover:border-[#a3ff12]/30'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 md:gap-8">
                   <div className="flex items-center gap-4 md:gap-6">
                     <div className={`w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 ${conta.pago ? 'bg-[#a3ff12]/10 text-[#a3ff12]' : 'bg-[#FF4D4D]/10 text-[#FF4D4D]'}`}>
-                      {conta.pago ? <Check className="w-4 h-4 md:w-5 md:h-5"/> : <DollarSign className="w-4 h-4 md:w-5 md:h-5"/>}
+                      {conta.pago ? <Check className="w-4 h-4 md:w-5 md:h-5" /> : <DollarSign className="w-4 h-4 md:w-5 md:h-5" />}
                     </div>
                     <div className="space-y-1 min-w-0">
                       <h3 className="text-base md:text-2xl font-black text-white tracking-tight truncate">{conta.descricao}</h3>
@@ -318,7 +323,7 @@ export default function Pagamentos() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between sm:justify-end gap-6 md:gap-10 border-t border-white/5 sm:border-0 pt-4 sm:pt-0">
                     <div className="text-left sm:text-right">
                       {editingId === conta.id ? (
@@ -341,7 +346,7 @@ export default function Pagamentos() {
                       ) : (
                         <div className="flex items-center gap-3 justify-end group">
                           {!conta.pago && (
-                            <button 
+                            <button
                               onClick={() => { setEditingId(conta.id); setEditingValue(conta.valor.toString()); }}
                               className="p-2 text-zinc-600 hover:text-[#a3ff12] transition-all bg-white/5 rounded-lg"
                               title="Editar valor"
@@ -373,7 +378,7 @@ export default function Pagamentos() {
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setIsCalendarOpen(false)} />
           <div className="bg-[#15151A] border border-white/10 rounded-[2rem] md:rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-hidden relative z-10 shadow-2xl animate-in zoom-in duration-300 flex flex-col">
-            
+
             <div className="p-6 md:p-10 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter">Calendário Mensal</h2>
@@ -401,7 +406,7 @@ export default function Pagamentos() {
                   const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
 
                   return (
-                    <button 
+                    <button
                       key={day}
                       onClick={() => setSelectedDay(day)}
                       className={`aspect-square relative rounded-xl md:rounded-2xl border transition-all flex flex-col items-center justify-center group ${selectedDay === day ? 'bg-[#a3ff12] border-[#a3ff12] scale-105 shadow-[0_0_20px_rgba(163,255,18,0.3)]' : 'bg-black/20 border-white/5 hover:border-white/20'}`}
@@ -439,7 +444,7 @@ export default function Pagamentos() {
                         <div key={conta.id} className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${conta.pago ? 'bg-[#a3ff12]/10 text-[#a3ff12]' : 'bg-[#FF4D4D]/10 text-[#FF4D4D]'}`}>
-                              {conta.pago ? <Check size={20}/> : <DollarSign size={20}/>}
+                              {conta.pago ? <Check size={20} /> : <DollarSign size={20} />}
                             </div>
                             <div>
                               <h4 className="font-black text-white text-sm">{conta.descricao}</h4>

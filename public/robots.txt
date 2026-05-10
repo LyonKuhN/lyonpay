@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://contas.lyonpay.com/sitemap.xml
