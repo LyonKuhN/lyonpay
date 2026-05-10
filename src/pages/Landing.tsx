@@ -324,7 +324,15 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-[#a3ff12]/10 text-[#a3ff12] rounded-full flex items-center justify-center mx-auto mb-6"><Mail size={32} /></div>
                 <h2 className="text-2xl font-bold text-white mb-3">Verifique seu e-mail</h2>
                 <p className="text-zinc-400 text-sm leading-relaxed mb-8">{successMessage}</p>
-                <button onClick={() => setIsAuthModalOpen('login')} className="w-full py-4 bg-white/5 border border-white/10 text-white font-bold rounded-2xl hover:bg-white/10 transition-all">Ir para Login</button>
+                <button 
+                  onClick={() => {
+                    setSuccessMessage('');
+                    setIsAuthModalOpen('login');
+                  }} 
+                  className="w-full py-4 bg-white/5 border border-white/10 text-white font-bold rounded-2xl hover:bg-white/10 transition-all"
+                >
+                  Ir para Login
+                </button>
               </div>
             ) : (
               <>

@@ -68,29 +68,47 @@ app.use((req, res, next) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'lyonpay-secret-key-2026';
 
-// Resend Email logic
 const sendConfirmationEmail = async (email, name, token) => {
-  const frontendUrl = process.env.SERVICE_FQDN_LYONPAY_WEB ? `http://${process.env.SERVICE_FQDN_LYONPAY_WEB}` : 'http://localhost:5173';
+  const frontendUrl = process.env.SERVICE_FQDN_LYONPAY_WEB 
+    ? `https://${process.env.SERVICE_FQDN_LYONPAY_WEB}` 
+    : 'http://localhost:5173';
+  
   const verifyUrl = `${frontendUrl}/verify?token=${token}`;
+  const htmlContent = `
+    <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
+      <h1 style="color: #a3ff12; font-size: 24px;">Olá, ${name}!</h1>
+      <p style="font-size: 16px; color: #a1a1aa;">Para começar a usar o Lyonpay, precisamos que você confirme seu e-mail.</p>
+      <div style="text-align: center;">
+        <a href="${verifyUrl}" style="display: inline-block; background-color: #a3ff12; color: black; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-decoration: none; margin: 20px 0;">Confirmar E-mail</a>
+      </div>
+      <p style="font-size: 14px; color: #71717a;">Ou copie o link: ${verifyUrl}</p>
+      <hr style="border: 0; border-top: 1px solid #27272a; margin: 30px 0;" />
+      <p style="font-weight: bold; color: #FFD700;">Lyonpay - Controle seu futuro.</p>
+    </div>
+  `;
+
+  console.log(`[Resend] Tentando enviar e-mail para: ${email}`);
+
   try {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: process.env.EMAIL_FROM || 'Lyonpay <onboarding@resend.dev>',
       to: email,
       subject: "Confirme seu e-mail no Lyonpay! 🛡️",
-      html: `
-        <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
-          <h1 style="color: #a3ff12; font-size: 24px;">Olá, ${name}!</h1>
-          <p style="font-size: 16px; color: #a1a1aa;">Para começar a usar o Lyonpay, precisamos que você confirme seu e-mail.</p>
-          <div style="text-align: center;">
-            <a href="${verifyUrl}" style="display: inline-block; background-color: #a3ff12; color: black; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-decoration: none; margin: 20px 0;">Confirmar E-mail</a>
-          </div>
-          <p style="font-size: 14px; color: #71717a;">Ou copie o link: ${verifyUrl}</p>
-          <hr style="border: 0; border-top: 1px solid #27272a; margin: 30px 0;" />
-          <p style="font-weight: bold; color: #FFD700;">Lyonpay - Controle seu futuro.</p>
-        </div>
-      `,
+      html: htmlContent,
     });
-  } catch (error) { console.error("Erro ao enviar email com Resend:", error); }
+    
+    if (error) {
+      console.error("!!! ERRO NO RESEND:", error);
+      // Se o erro for de domínio não verificado, logamos um aviso específico
+      if (error.message?.includes('domain') || error.name === 'validation_error') {
+        console.warn("DICA: Verifique se o domínio 'lyonpay.com' está verificado no painel do Resend.");
+      }
+    } else {
+      console.log("[Resend] E-mail enviado com sucesso! ID:", data.id);
+    }
+  } catch (err) {
+    console.error("!!! FALHA CRÍTICA AO CHAMAR API DO RESEND:", err.message);
+  }
 };
 
 const authenticateToken = (req, res, next) => {
