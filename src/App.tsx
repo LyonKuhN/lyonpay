@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, TrendingDown, TrendingUp, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck, Calendar, Menu, User, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, TrendingDown, TrendingUp, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck, Calendar, User } from 'lucide-react';
 import Landing from './pages/Landing';
 import Verify from './pages/Verify';
 import Dashboard from './pages/Dashboard';
