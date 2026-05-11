@@ -140,3 +140,21 @@ create table public.support_messages (
 create trigger update_support_messages_updated_at BEFORE
 update on support_messages for EACH row
 execute FUNCTION update_updated_at_column ();
+
+create table public.lembretes (
+  id uuid not null default gen_random_uuid (),
+  user_id uuid not null,
+  titulo text not null,
+  descricao text null,
+  data_lembrete timestamp with time zone not null,
+  concluido boolean null default false,
+  notificado boolean null default false,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint lembretes_pkey primary key (id),
+  constraint lembretes_user_id_fkey foreign KEY (user_id) references auth.users (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create trigger update_lembretes_updated_at BEFORE
+update on lembretes for EACH row
+execute FUNCTION update_updated_at_column ();

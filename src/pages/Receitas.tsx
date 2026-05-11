@@ -20,6 +20,8 @@ export default function Receitas() {
 
   const [newCat, setNewCat] = useState({ nome: '', cor: '#a3ff12' });
 
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -67,6 +69,14 @@ export default function Receitas() {
         fetchData();
       }
     } catch (err) { console.error(err); }
+  };
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
   };
 
   // Cálculos para CARDS
@@ -124,6 +134,7 @@ export default function Receitas() {
         </div>
       </div>
 
+      {/* Agrupamento por Ano e Mês */}
       <div className="space-y-6">
         {loading ? (
           <div className="py-40 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={48} /></div>
@@ -131,36 +142,91 @@ export default function Receitas() {
           <div className="py-40 text-center bg-white/[0.01] border-2 border-dashed border-white/5 rounded-[4rem]">
             <p className="text-zinc-500 font-black uppercase tracking-[0.4em]">Nenhuma receita</p>
           </div>
-        ) : (
-          receitas.map((item: any) => (
-            <div key={item.id} className="group relative p-6 md:p-10 rounded-3xl md:rounded-[3rem] bg-[#15151A] border border-white/5 hover:border-[#a3ff12]/30 transition-all shadow-2xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 md:gap-8">
-                <div className="flex items-center gap-4 md:gap-6">
-                  <div className="w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-[#a3ff12]/10 text-[#a3ff12] flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <DollarSign className="w-[26px] h-[26px]" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg md:text-3xl font-black text-white tracking-tight">{item.descricao}</h3>
-                    <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1 md:mt-2">
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 md:px-3 md:py-1 bg-white/5 rounded-md md:rounded-lg border border-white/5">
-                        <Tag className="w-3 h-3" />
-                        <span className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{item.categoria}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[8px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        <Calendar className="w-3 h-3" /> {new Date(item.data_recebimento).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        ) : (() => {
+          const byYearMonth: Record<string, Record<string, any[]>> = {};
+          receitas.forEach(exp => {
+            let year = "Sem Data";
+            let month = "00";
+            if (exp.data_recebimento) {
+              const d = new Date(exp.data_recebimento);
+              year = d.getFullYear().toString();
+              month = (d.getMonth() + 1).toString().padStart(2, '0');
+            }
+            if (!byYearMonth[year]) byYearMonth[year] = {};
+            if (!byYearMonth[year][month]) byYearMonth[year][month] = [];
+            byYearMonth[year][month].push(exp);
+          });
 
-                <div className="text-left sm:text-right">
-                  <p className="text-2xl md:text-5xl font-black text-[#a3ff12] tracking-tighter">+ R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  <p className="text-[8px] md:text-[10px] font-black text-zinc-600 uppercase tracking-widest">RECEBIDO</p>
+          return Object.keys(byYearMonth).sort((a,b) => b.localeCompare(a)).map(year => (
+            <div key={`year-${year}`} className="bg-[#15151A] rounded-[2rem] border border-white/5 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
+              
+              {/* Year Header */}
+              <button onClick={() => toggleGroup(`year-${year}`)} className="w-full p-6 md:p-8 flex items-center justify-between hover:bg-white/5 transition-colors group relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-1.5 h-8 bg-[#a3ff12] rounded-full shadow-[0_0_15px_rgba(163,255,18,0.4)]" />
+                  <span className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase">Ano <span className="text-[#a3ff12]">{year}</span></span>
                 </div>
-              </div>
+                <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center transition-transform duration-500 group-hover:bg-white/10 ${expandedGroups.has(`year-${year}`) ? 'rotate-180 bg-[#a3ff12]/10 text-[#a3ff12]' : 'text-zinc-500'}`}>
+                  <ChevronDown size={24} />
+                </div>
+              </button>
+
+              {expandedGroups.has(`year-${year}`) && (
+                <div className="border-t border-white/5 bg-black/10 relative">
+                  {/* Timeline Line */}
+                  <div className="absolute left-8 md:left-11 top-0 bottom-0 w-px bg-white/5 z-0" />
+
+                  <div className="space-y-2 pb-6">
+                    {Object.keys(byYearMonth[year]).sort((a,b) => b.localeCompare(a)).map(month => (
+                      <div key={`month-${year}-${month}`} className="relative">
+                        <button onClick={() => toggleGroup(`month-${year}-${month}`)} className="w-full pl-16 pr-6 md:pl-20 md:pr-8 py-5 flex items-center justify-between hover:bg-white/5 transition-colors group relative z-10">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${expandedGroups.has(`month-${year}-${month}`) ? 'bg-[#FFD700] border-[#FFD700] shadow-[0_0_10px_rgba(255,215,0,0.5)]' : 'bg-transparent border-white/20'}`} />
+                            <span className="text-lg md:text-xl font-black text-white uppercase tracking-widest">Mês <span className="text-[#FFD700]">{month}</span></span>
+                          </div>
+                          <ChevronDown size={18} className={`text-zinc-500 transition-transform ${expandedGroups.has(`month-${year}-${month}`) ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {expandedGroups.has(`month-${year}-${month}`) && (
+                          <div className="pl-16 pr-4 md:pl-24 md:pr-8 pb-6 space-y-4 animate-in slide-in-from-top-2 duration-300 relative z-10">
+                            {byYearMonth[year][month].map((item: any) => (
+                              <div key={item.id} className="group relative p-6 md:p-10 rounded-3xl md:rounded-[2.5rem] bg-[#15151A] border border-white/5 hover:border-[#a3ff12]/30 transition-all shadow-2xl">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 md:gap-8">
+                                  <div className="flex items-center gap-4 md:gap-6">
+                                    <div className="w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-[#a3ff12]/10 text-[#a3ff12] flex items-center justify-center group-hover:scale-110 transition-transform">
+                                      <DollarSign className="w-[26px] h-[26px]" />
+                                    </div>
+                                    <div>
+                                      <h3 className="text-lg md:text-3xl font-black text-white tracking-tight">{item.descricao}</h3>
+                                      <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1 md:mt-2">
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 md:px-3 md:py-1 bg-white/5 rounded-md md:rounded-lg border border-white/5">
+                                          <Tag className="w-3 h-3" />
+                                          <span className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{item.categoria}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-[8px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                                          <Calendar className="w-3 h-3" /> {new Date(item.data_recebimento).toLocaleDateString()}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-left sm:text-right">
+                                    <p className="text-2xl md:text-5xl font-black text-[#a3ff12] tracking-tighter">+ R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-[8px] md:text-[10px] font-black text-zinc-600 uppercase tracking-widest">RECEBIDO</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          ))
-        )}
+          ));
+        })()}
       </div>
 
       {isModalOpen && (

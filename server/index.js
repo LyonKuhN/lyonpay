@@ -486,6 +486,58 @@ app.post('/api/despesas/gerar-fixas', authenticateToken, async (req, res) => {
   }
 });
 
+// --- LEMBRETES ROUTES ---
+app.get('/api/lembretes', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM public.lembretes WHERE user_id = $1 ORDER BY data_lembrete ASC',
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/lembretes', authenticateToken, async (req, res) => {
+  const { titulo, descricao, data_lembrete } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO public.lembretes (user_id, titulo, descricao, data_lembrete) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.user.id, titulo, descricao, data_lembrete]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/lembretes/:id/concluir', authenticateToken, async (req, res) => {
+  const { concluido } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE public.lembretes SET concluido = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+      [concluido, req.params.id, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/lembretes/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM public.lembretes WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    res.json({ message: 'Lembrete removido' });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- STRIPE & SUBSCRIPTIONS ---
 app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   try {
@@ -616,6 +668,72 @@ app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// --- BACKGROUND WORKER: LEMBRETES ---
+const checkReminders = async () => {
+  console.log(`[Worker] Verificando lembretes: ${new Date().toLocaleString()}`);
+  try {
+    // Busca lembretes não notificados que estão no horário de acontecer (ou já passaram)
+    // Consideramos uma margem de segurança
+    const result = await pool.query(`
+      SELECT l.*, u.email as user_email, p.display_name
+      FROM public.lembretes l
+      JOIN auth.users u ON l.user_id = u.id
+      LEFT JOIN public.profiles p ON u.id = p.user_id
+      WHERE l.concluido = false 
+      AND l.notificado = false
+      AND l.data_lembrete <= NOW() + INTERVAL '5 minutes'
+    `);
+
+    for (const rem of result.rows) {
+      console.log(`[Worker] Enviando lembrete: "${rem.titulo}" para ${rem.user_email}`);
+      
+      const htmlContent = `
+        <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px; border: 1px solid #27272a;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span style="background-color: #FFD700; color: black; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase;">Lembrete Lyonpay</span>
+          </div>
+          <h1 style="color: #a3ff12; font-size: 24px; margin-bottom: 10px;">Olá, ${rem.display_name || 'Usuário'}!</h1>
+          <p style="font-size: 18px; color: white; font-weight: bold; margin-bottom: 5px;">${rem.titulo}</p>
+          <p style="font-size: 16px; color: #a1a1aa; margin-bottom: 20px;">${rem.descricao || 'Você tem um compromisso agendado para agora.'}</p>
+          
+          <div style="background-color: #15151A; padding: 20px; border-radius: 12px; border: 1px solid #27272a; margin-bottom: 20px;">
+            <p style="margin: 0; color: #71717a; font-size: 12px; text-transform: uppercase;">Horário Agendado</p>
+            <p style="margin: 5px 0 0 0; color: white; font-weight: bold;">${new Date(rem.data_lembrete).toLocaleString('pt-BR')}</p>
+          </div>
+
+          <div style="text-align: center;">
+            <a href="https://${process.env.SERVICE_FQDN_LYONPAY_WEB || 'localhost:5173'}/calendario" style="display: inline-block; background-color: #a3ff12; color: black; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-decoration: none; margin: 10px 0;">Ver no Calendário</a>
+          </div>
+          
+          <hr style="border: 0; border-top: 1px solid #27272a; margin: 30px 0;" />
+          <p style="font-weight: bold; color: #FFD700; text-align: center;">Lyonpay - Controle seu futuro.</p>
+        </div>
+      `;
+
+      try {
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM || 'Lyonpay <alertas@resend.dev>',
+          to: rem.user_email,
+          subject: `🔔 Lembrete: ${rem.titulo}`,
+          html: htmlContent,
+        });
+
+        // Marcar como notificado para não enviar de novo
+        await pool.query('UPDATE public.lembretes SET notificado = true WHERE id = $1', [rem.id]);
+      } catch (err) {
+        console.error(`[Worker] Erro ao enviar email para ${rem.user_email}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error("[Worker] Erro na rotina de lembretes:", err);
+  }
+};
+
+// Executa a cada 5 minutos
+setInterval(checkReminders, 5 * 60 * 1000);
+// Executa uma vez na inicialização (após 10 segundos)
+setTimeout(checkReminders, 10000);
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => console.log(`Servidor Lyonpay rodando na porta ${PORT}`));

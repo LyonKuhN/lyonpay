@@ -1,79 +1,140 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Receipt, Wallet, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, TrendingDown, TrendingUp, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck, Calendar, Menu, User, ChevronDown } from 'lucide-react';
 import Landing from './pages/Landing';
 import Verify from './pages/Verify';
 import Dashboard from './pages/Dashboard';
 import Receitas from './pages/Receitas';
 import Despesas from './pages/Despesas';
 import Pagamentos from './pages/Pagamentos';
+import Calendario from './pages/Calendario';
 import Config from './pages/Config';
 import Admin from './pages/Admin';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { useState, useRef, useEffect } from 'react';
 
 function FloatingNav() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const links = [
+  const mainLinks = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Receitas', path: '/receitas', icon: Wallet },
-    { name: 'Despesas', path: '/despesas', icon: Receipt },
+    { name: 'Receitas', path: '/receitas', icon: TrendingUp },
+    { name: 'Despesas', path: '/despesas', icon: TrendingDown },
     { name: 'Pagamentos', path: '/pagamentos', icon: CreditCard },
   ];
 
+  const extraLinks = [
+    { name: 'Calendário', path: '/calendario', icon: Calendar },
+    { name: 'Configurações', path: '/config', icon: Settings },
+  ];
+
   if (user?.role === 'admin') {
-    links.push({ name: 'Admin', path: '/admin', icon: ShieldCheck });
+    extraLinks.unshift({ name: 'Admin', path: '/admin', icon: ShieldCheck });
   }
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] md:w-auto max-w-6xl">
-      <nav className="glass bg-[#15151A]/80 backdrop-blur-xl px-1.5 md:px-2 py-1.5 md:py-2 rounded-full border border-white/5 flex items-center justify-between md:justify-start shadow-2xl">
-        <div className="px-3 md:px-4 flex items-center border-r border-white/5 mr-1 md:mr-2 shrink-0">
+    <div className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[95%] md:w-auto md:min-w-[500px] max-w-6xl">
+      <nav className="glass bg-[#15151A]/80 backdrop-blur-xl px-1.5 md:px-2 py-1.5 md:py-2 rounded-full border border-white/5 flex items-center justify-between shadow-2xl relative">
+        
+        {/* Logo */}
+        <div className="pl-2 pr-3 md:px-4 flex items-center border-r border-white/5 mr-1 md:mr-2 shrink-0">
           <Link to="/" className="flex items-center cursor-pointer">
             <img src="/logo.png" alt="Logo" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-lg" />
           </Link>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          {links.map((link) => {
+        {/* Main Navigation */}
+        <div className="flex-1 flex items-center justify-center gap-0.5 md:gap-1 overflow-x-auto no-scrollbar px-1">
+          {mainLinks.map((link) => {
             const isActive = location.pathname === link.path;
             return (
               <Link
                 key={link.name}
                 to={link.path}
-                className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
+                className={`px-2.5 md:px-4 py-2 rounded-full text-[10px] md:text-sm font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
                   isActive
                     ? 'bg-white/10 text-white shadow-lg'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    : 'text-zinc-500 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <link.icon size={16} className={isActive ? 'text-[#a3ff12]' : ''} />
-                <span className="hidden md:inline">{link.name}</span>
+                <span className="hidden sm:inline">{link.name}</span>
               </Link>
             );
           })}
         </div>
 
-        <div className="pl-2 md:pl-4 ml-1 md:ml-2 border-l border-white/5 flex items-center gap-1 md:gap-2 shrink-0">
-          {/* Theme Toggle */}
+        {/* Profile / Extra Menu */}
+        <div className="pl-1 md:pl-2 ml-1 md:ml-2 border-l border-white/5 flex items-center gap-1 shrink-0" ref={menuRef}>
           <button
-            onClick={toggleTheme}
-            className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
-            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all ${
+              isMenuOpen ? 'bg-[#a3ff12] text-black shadow-[0_0_15px_rgba(163,255,18,0.4)]' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
           >
-            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            <User size={18} />
           </button>
-          <Link to="/config" className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all">
-            <Settings size={18} />
-          </Link>
-          <button
-            onClick={logout}
-            className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-[#FF4D4D]/70 hover:text-[#FF4D4D] hover:bg-[#FF4D4D]/10 transition-all"
-          >
-            <LogOut size={18} />
-          </button>
+
+          {/* Dropdown Menu */}
+          {isMenuOpen && (
+            <div className="absolute top-full mt-3 right-0 w-64 bg-[#15151A] border border-white/10 rounded-3xl p-3 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 backdrop-blur-2xl">
+              <div className="px-4 py-3 border-b border-white/5 mb-2">
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Conectado como</p>
+                <p className="text-sm font-black text-white truncate">{user?.name || user?.email}</p>
+              </div>
+
+              <div className="space-y-1">
+                {extraLinks.map((link) => {
+                  const isActive = location.pathname === link.path;
+                  return (
+                    <Link
+                      key={link.name}
+                      to={link.path}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all ${
+                        isActive ? 'bg-[#a3ff12] text-black' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <link.icon size={16} />
+                      {link.name}
+                    </Link>
+                  );
+                })}
+
+                <button
+                  onClick={() => { toggleTheme(); setIsMenuOpen(false); }}
+                  className="w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                  {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+                </button>
+
+                <div className="h-px bg-white/5 my-2" />
+
+                <button
+                  onClick={logout}
+                  className="w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-[#FF4D4D]/70 hover:text-[#FF4D4D] hover:bg-[#FF4D4D]/10 transition-all"
+                >
+                  <LogOut size={16} />
+                  Sair da Conta
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
     </div>
@@ -127,6 +188,7 @@ function AppLayout() {
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/receitas" element={<PrivateRoute><Receitas /></PrivateRoute>} />
           <Route path="/despesas" element={<PrivateRoute><Despesas /></PrivateRoute>} />
+          <Route path="/calendario" element={<PrivateRoute><Calendario /></PrivateRoute>} />
           <Route path="/pagamentos" element={<PrivateRoute><Pagamentos /></PrivateRoute>} />
           <Route path="/config" element={<PrivateRoute allowExpired={true}><Config /></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute>{user?.role === 'admin' ? <Admin /> : <Navigate to="/dashboard" />}</PrivateRoute>} />

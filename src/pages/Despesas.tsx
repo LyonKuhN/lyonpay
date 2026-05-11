@@ -661,7 +661,7 @@ export default function Despesas() {
           if (viewMode === 'modelos') return displayList.map(item => renderCard(item));
 
           return (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {groupedInstallments.length > 0 && (
                 <div className="space-y-4">
                   {groupedInstallments.map(item => renderCard(item))}
@@ -669,30 +669,47 @@ export default function Despesas() {
               )}
 
               {Object.keys(byYearMonth).sort((a,b) => b.localeCompare(a)).map(year => (
-                <div key={`year-${year}`} className="bg-[#15151A] rounded-[2rem] border border-white/5 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                  <button onClick={() => toggleGroup(`year-${year}`)} className="w-full p-6 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                    <span className="text-2xl font-black text-white tracking-tighter">Ano <span className="text-[#a3ff12]">{year}</span></span>
-                    <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-transform duration-300 group-hover:bg-white/10 ${expandedGroups.has(`year-${year}`) ? 'rotate-180' : ''}`}>
-                      <ChevronDown size={20} className="text-zinc-400" />
+                <div key={`year-${year}`} className="bg-[#15151A] rounded-[2rem] border border-white/5 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
+                  
+                  {/* Year Header */}
+                  <button onClick={() => toggleGroup(`year-${year}`)} className="w-full p-6 md:p-8 flex items-center justify-between hover:bg-white/5 transition-colors group relative z-10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-1.5 h-8 bg-[#a3ff12] rounded-full shadow-[0_0_15px_rgba(163,255,18,0.4)]" />
+                      <span className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase">Ano <span className="text-[#a3ff12]">{year}</span></span>
+                    </div>
+                    <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center transition-transform duration-500 group-hover:bg-white/10 ${expandedGroups.has(`year-${year}`) ? 'rotate-180 bg-[#a3ff12]/10 text-[#a3ff12]' : 'text-zinc-500'}`}>
+                      <ChevronDown size={24} />
                     </div>
                   </button>
+
                   {expandedGroups.has(`year-${year}`) && (
-                    <div className="border-t border-white/5 bg-black/20 p-4 md:p-6 space-y-4">
-                      {Object.keys(byYearMonth[year]).sort((a,b) => b.localeCompare(a)).map(month => (
-                        <div key={`month-${year}-${month}`} className="bg-[#15151A] rounded-[1.5rem] border border-white/5 shadow-lg overflow-hidden">
-                          <button onClick={() => toggleGroup(`month-${year}-${month}`)} className="w-full p-5 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                            <span className="text-sm font-black text-white uppercase tracking-widest">Mês <span className="text-[#FFD700]">{month}</span></span>
-                            <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center transition-transform duration-300 group-hover:bg-white/10 ${expandedGroups.has(`month-${year}-${month}`) ? 'rotate-180' : ''}`}>
-                              <ChevronDown size={16} className="text-zinc-500" />
-                            </div>
-                          </button>
-                          {expandedGroups.has(`month-${year}-${month}`) && (
-                            <div className="border-t border-white/5 p-4 md:p-6 space-y-4 bg-[#111115]">
-                              {byYearMonth[year][month].map(item => renderCard(item))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                    <div className="border-t border-white/5 bg-black/10 relative">
+                      {/* Timeline Line for Year */}
+                      <div className="absolute left-8 md:left-11 top-0 bottom-0 w-px bg-white/5 z-0" />
+
+                      <div className="space-y-2 pb-6">
+                        {Object.keys(byYearMonth[year]).sort((a,b) => b.localeCompare(a)).map(month => (
+                          <div key={`month-${year}-${month}`} className="relative">
+                            
+                            {/* Month Header */}
+                            <button onClick={() => toggleGroup(`month-${year}-${month}`)} className="w-full pl-16 pr-6 md:pl-20 md:pr-8 py-5 flex items-center justify-between hover:bg-white/5 transition-colors group relative z-10">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${expandedGroups.has(`month-${year}-${month}`) ? 'bg-[#FFD700] border-[#FFD700] shadow-[0_0_10px_rgba(255,215,0,0.5)]' : 'bg-transparent border-white/20'}`} />
+                                <span className="text-lg md:text-xl font-black text-white uppercase tracking-widest">Mês <span className="text-[#FFD700]">{month}</span></span>
+                              </div>
+                              <div className={`w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center transition-transform duration-300 group-hover:bg-white/10 ${expandedGroups.has(`month-${year}-${month}`) ? 'rotate-180' : ''}`}>
+                                <ChevronDown size={18} className="text-zinc-500" />
+                              </div>
+                            </button>
+
+                            {expandedGroups.has(`month-${year}-${month}`) && (
+                              <div className="pl-16 pr-4 md:pl-24 md:pr-8 pb-6 space-y-4 animate-in slide-in-from-top-2 duration-300 relative z-10">
+                                {byYearMonth[year][month].map(item => renderCard(item))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

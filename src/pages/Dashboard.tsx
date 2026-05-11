@@ -27,6 +27,7 @@ export default function Dashboard() {
     totalPendente: 0,
     categorias: [] as any[],
   });
+  const [lembretes, setLembretes] = useState<any[]>([]);
 
   const fetchData = async () => {
     try {
@@ -34,14 +35,16 @@ export default function Dashboard() {
       const month = now.getMonth() + 1;
       const year = now.getFullYear();
 
-      const [resRec, resDes, resAtrasadas] = await Promise.all([
+      const [resRec, resDes, resAtrasadas, resRem] = await Promise.all([
         fetch(API_BASE_URL + '/api/receitas', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/api/despesas?month=${month}&year=${year}`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(API_BASE_URL + '/api/despesas/atrasadas', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(API_BASE_URL + '/api/lembretes', { headers: { 'Authorization': `Bearer ${token}` } }),
       ]);
       const receitas = await resRec.json();
       const despesas = await resDes.json();
       const atrasadasData = await resAtrasadas.json();
+      const reminders = await resRem.json();
 
       const totalRec = Array.isArray(receitas) ? receitas.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) : 0;
       const totalDes = Array.isArray(despesas) ? despesas.filter((d: any) => d.pago).reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) : 0;
@@ -58,6 +61,7 @@ export default function Dashboard() {
       const categorias = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
       setAtrasadas(Array.isArray(atrasadasData) ? atrasadasData : []);
+      setLembretes(Array.isArray(reminders) ? reminders.filter(r => !r.concluido).slice(0, 3) : []);
       setData({
         receitas: Array.isArray(receitas) ? receitas.slice(0, 5) : [],
         despesas: Array.isArray(despesas) ? despesas.filter((d: any) => !d.pago).sort((a: any, b: any) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime()).slice(0, 5) : [],
@@ -161,6 +165,23 @@ export default function Dashboard() {
             <p className="text-zinc-400 text-xs">Total: R$ {atrasadas.reduce((a: number, c: any) => a + Number(c.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
           </div>
           <button onClick={() => navigate('/pagamentos')} className="shrink-0 px-4 py-2 bg-[#FF4D4D] text-white font-black text-xs rounded-xl hover:bg-[#FF4D4D]/90 transition-all">Ver agora</button>
+        </div>
+      )}
+
+      {/* Lembretes Rápidos */}
+      {lembretes.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-300">
+          {lembretes.map((rem, i) => (
+            <div key={i} onClick={() => navigate('/calendario')} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition-all">
+              <div className="w-8 h-8 rounded-lg bg-[#FFD700]/10 flex items-center justify-center text-[#FFD700]">
+                <Clock size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-black text-xs truncate">{rem.titulo}</p>
+                <p className="text-zinc-500 text-[10px] font-bold uppercase">{new Date(rem.data_lembrete).toLocaleDateString('pt-BR')} {new Date(rem.data_lembrete).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
