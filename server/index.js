@@ -682,11 +682,15 @@ const checkReminders = async () => {
       LEFT JOIN public.profiles p ON u.id = p.user_id
       WHERE l.concluido = false 
       AND l.notificado = false
-      AND l.data_lembrete <= NOW() + INTERVAL '5 minutes'
+      AND l.data_lembrete <= NOW() + INTERVAL '1 minute'
     `);
 
+    if (result.rows.length > 0) {
+      console.log(`[Worker] Encontrados ${result.rows.length} lembretes para enviar.`);
+    }
+
     for (const rem of result.rows) {
-      console.log(`[Worker] Enviando lembrete: "${rem.titulo}" para ${rem.user_email}`);
+      console.log(`[Worker] Enviando e-mail para ${rem.user_email} (ID Lembrete: ${rem.id})`);
       
       const htmlContent = `
         <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px; border: 1px solid #27272a;">

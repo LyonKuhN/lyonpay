@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Tag, Loader2, Sparkles, TrendingUp, Receipt } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Tag, Loader2, Sparkles, TrendingUp, Receipt, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 

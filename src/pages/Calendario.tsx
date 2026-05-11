@@ -61,7 +61,10 @@ export default function Calendario() {
       const res = await fetch(`${API_BASE_URL}/api/lembretes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(newReminder),
+        body: JSON.stringify({
+          ...newReminder,
+          data_lembrete: new Date(newReminder.data_lembrete).toISOString()
+        }),
       });
       if (res.ok) {
         setIsModalOpen(false);
