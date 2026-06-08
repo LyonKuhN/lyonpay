@@ -114,9 +114,6 @@ export default function Landing() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[#a3ff12]/8 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute top-20 left-10 w-[300px] h-[300px] bg-[#FFD700]/5 blur-[80px] rounded-full pointer-events-none" />
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#a3ff12]/10 border border-[#a3ff12]/20 text-[#a3ff12] text-xs font-bold uppercase tracking-widest mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-            <Zap size={12} /> Plataforma financeira pessoal · 100% brasileira
-          </div>
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter text-white mb-6 leading-[1.08] animate-in fade-in slide-in-from-bottom-6 duration-700">
             Pare de perder dinheiro<br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#a3ff12] to-[#FFD700]"> sem saber por quê.</span>
