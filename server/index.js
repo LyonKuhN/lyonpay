@@ -31,6 +31,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import axios from 'axios';
 import Stripe from 'stripe';
 import { Resend } from 'resend';
 import helmet from 'helmet';
@@ -222,6 +223,93 @@ app.post('/api/auth/resend-verification', async (req, res) => {
   }
 });
 
+// Google OAuth
+app.post('/api/auth/google', async (req, res) => {
+  const { access_token } = req.body;
+  try {
+    // Validar token com Google
+    const response = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    
+    const { email, name, picture } = response.data;
+    
+    // Verificar se usuário existe
+    let user = await pool.query('SELECT * FROM auth.users WHERE email = $1', [email]);
+    
+    if (user.rows.length === 0) {
+      // Criar novo usuário
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      const result = await pool.query(
+        'INSERT INTO auth.users (email, encrypted_password, confirmed) VALUES ($1, $2, true) RETURNING id',
+        [email, hashedPassword]
+      );
+      
+      const userId = result.rows[0].id;
+      
+      // Criar perfil do usuário
+      await pool.query(
+        'INSERT INTO public.profiles (user_id, display_name) VALUES ($1, $2)',
+        [userId, name]
+      );
+      
+      // 7 Dias de Teste Grátis para novos usuários
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      await pool.query(
+        'INSERT INTO public.subscribers (user_id, email, subscribed, subscription_tier, expires_at) VALUES ($1, $2, false, $3, $4)',
+        [userId, email, 'trial', expiresAt]
+      );
+      
+      // Categorias padrão para o usuário
+      const defaultCategories = [
+        { nome: 'Moradia', cor: '#00D1FF', tipo: 'despesa', icone: 'Tag' },
+        { nome: 'Transporte', cor: '#FFD700', tipo: 'despesa', icone: 'Tag' },
+        { nome: 'Alimentação', cor: '#FF7A00', tipo: 'despesa', icone: 'Tag' },
+        { nome: 'Saúde', cor: '#FF4D4D', tipo: 'despesa', icone: 'Tag' },
+        { nome: 'Educação', cor: '#9B59B6', tipo: 'despesa', icone: 'Tag' },
+        { nome: 'Lazer', cor: '#a3ff12', tipo: 'despesa', icone: 'Tag' },
+        { nome: 'Salário', cor: '#a3ff12', tipo: 'receita', icone: 'Tag' }
+      ];
+
+      for (const cat of defaultCategories) {
+        await pool.query(
+          'INSERT INTO public.categorias (user_id, nome, tipo, cor, icone) VALUES ($1, $2, $3, $4, $5)',
+          [userId, cat.nome, cat.tipo, cat.cor, cat.icone]
+        );
+      }
+      
+      user = await pool.query('SELECT * FROM auth.users WHERE id = $1', [userId]);
+    } else {
+      // Se usuário existe mas não está confirmado, confirmar agora
+      if (!user.rows[0].confirmed) {
+        await pool.query('UPDATE auth.users SET confirmed = true WHERE id = $1', [user.rows[0].id]);
+      }
+    }
+    
+    const userData = user.rows[0];
+    const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [userData.id]);
+    const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [userData.id]);
+    const displayName = profile.rows[0]?.display_name || 'Usuário';
+    
+    const jwtToken = jwt.sign({ id: userData.id, email: userData.email }, JWT_SECRET);
+    res.json({
+      token: jwtToken,
+      user: {
+        id: userData.id,
+        email: userData.email,
+        name: displayName,
+        role: userData.role,
+        subscribed: sub.rows[0]?.subscribed || false,
+        expires_at: sub.rows[0]?.expires_at
+      }
+    });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: 'Erro ao autenticar com Google' });
+  }
+});
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;

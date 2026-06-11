@@ -17,7 +17,7 @@ export default {
         textSecondary: '#A1A1AA'
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Outfit', 'sans-serif'],
       }
     },
   },

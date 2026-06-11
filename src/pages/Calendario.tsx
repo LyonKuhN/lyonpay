@@ -131,8 +131,8 @@ export default function Calendario() {
               </div>
             ))}
             {dayReminders.map((rem, idx) => (
-              <div key={idx} className={`px-1.5 py-0.5 rounded text-[8px] md:text-[9px] font-bold truncate bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 ${rem.concluido ? 'opacity-50 line-through' : ''}`}>
-                🔔 {rem.titulo}
+              <div key={idx} className={`px-1.5 py-0.5 rounded text-[8px] md:text-[9px] font-bold truncate bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 flex items-center gap-1 ${rem.concluido ? 'opacity-50 line-through' : ''}`}>
+                <Bell size={10} className="shrink-0"/> {rem.titulo}
               </div>
             ))}
           </div>
