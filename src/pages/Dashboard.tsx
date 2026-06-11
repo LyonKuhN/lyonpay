@@ -118,7 +118,7 @@ export default function Dashboard() {
             <Sparkles className="w-5 h-5 text-[#a3ff12]" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tighter">Olá, {user?.name?.split(' ')[0]} 👋</h1>
+            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tighter">Olá, {user?.name?.split(' ')[0]}!</h1>
             <p className="text-zinc-500 text-[9px] md:text-[10px] font-black uppercase tracking-widest capitalize">{monthName}</p>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function Dashboard() {
         <div className="p-5 bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
           <AlertCircle className="text-[#FF4D4D] shrink-0 w-5 h-5" />
           <div className="flex-1 min-w-0">
-            <p className="text-white font-black text-sm">⚠️ {atrasadas.length} {atrasadas.length === 1 ? 'conta atrasada' : 'contas atrasadas'}</p>
+            <p className="text-white font-black text-sm">{atrasadas.length} {atrasadas.length === 1 ? 'conta atrasada' : 'contas atrasadas'}</p>
             <p className="text-zinc-400 text-xs">Total: R$ {atrasadas.reduce((a: number, c: any) => a + Number(c.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
           </div>
           <button onClick={() => navigate('/pagamentos')} className="shrink-0 px-4 py-2 bg-[#FF4D4D] text-white font-black text-xs rounded-xl hover:bg-[#FF4D4D]/90 transition-all">Ver agora</button>
@@ -242,7 +242,7 @@ export default function Dashboard() {
             <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${healthScore}%`, backgroundColor: healthColor }} />
           </div>
           <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: healthColor }}>
-            {healthScore >= 70 ? '✓ Excelente' : healthScore >= 40 ? '⚠ Atenção' : '✗ Crítico'}
+            {healthScore >= 70 ? 'Excelente' : healthScore >= 40 ? 'Atenção' : 'Crítico'}
           </p>
         </div>
 
@@ -372,7 +372,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
         {[
           { label: 'Receitas este mês', value: data.receitas.length, icon: <TrendingUp className="w-4 h-4 text-[#a3ff12]" /> },
-          { label: 'Despesas pagas', value: `${data.despesas.filter((d: any) => d.pago).length} ✓`, icon: <CheckCircle2 className="w-4 h-4 text-[#a3ff12]" /> },
+          { label: 'Despesas pagas', value: data.despesas.filter((d: any) => d.pago).length, icon: <CheckCircle2 className="w-4 h-4 text-[#a3ff12]" /> },
           { label: 'Pendentes', value: data.despesas.length, icon: <Clock className="w-4 h-4 text-[#FFD700]" /> },
           { label: 'Atrasadas', value: atrasadas.length, icon: <AlertCircle className="w-4 h-4 text-[#FF4D4D]" /> },
         ].map((s, i) => (

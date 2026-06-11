@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, TrendingDown, TrendingUp, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck, Calendar, User } from 'lucide-react';
 import Landing from './pages/Landing';
 import Verify from './pages/Verify';
@@ -15,6 +15,7 @@ import { useState, useRef, useEffect } from 'react';
 
 function FloatingNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -48,38 +49,38 @@ function FloatingNav() {
 
   return (
     <div className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[95%] md:w-auto md:min-w-[500px] max-w-6xl">
-      <nav className="glass bg-[#15151A]/80 backdrop-blur-xl px-1.5 md:px-2 py-1.5 md:py-2 rounded-full border border-white/5 flex items-center justify-between shadow-2xl relative">
+      <nav className="glass bg-[#15151A]/80 backdrop-blur-xl px-4 md:px-6 py-2 rounded-full border border-white/5 flex items-center justify-between shadow-2xl relative">
         
         {/* Logo */}
-        <div className="pl-2 pr-3 md:px-4 flex items-center border-r border-white/5 mr-1 md:mr-2 shrink-0">
+        <div className="pr-3 md:pr-4 flex items-center border-r border-white/5 mr-2 md:mr-4 shrink-0">
           <Link to="/" className="flex items-center cursor-pointer">
             <img src="/logo.png" alt="Logo" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-lg" />
           </Link>
         </div>
 
         {/* Main Navigation */}
-        <div className="flex-1 flex items-center justify-center gap-0.5 md:gap-1 overflow-x-auto no-scrollbar px-1">
+        <div className="flex-1 flex items-center justify-center gap-1 md:gap-2 px-1">
           {mainLinks.map((link) => {
             const isActive = location.pathname === link.path;
             return (
               <Link
                 key={link.name}
                 to={link.path}
-                className={`px-2.5 md:px-4 py-2 rounded-full text-[10px] md:text-sm font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
+                className={`px-3 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 ${
                   isActive
-                    ? 'bg-white/10 text-white shadow-lg'
+                    ? 'bg-[#a3ff12]/10 text-[#a3ff12] shadow-lg'
                     : 'text-zinc-500 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <link.icon size={16} className={isActive ? 'text-[#a3ff12]' : ''} />
-                <span className="hidden sm:inline">{link.name}</span>
+                <span className="hidden lg:inline">{link.name}</span>
               </Link>
             );
           })}
         </div>
 
         {/* Profile / Extra Menu */}
-        <div className="pl-1 md:pl-2 ml-1 md:ml-2 border-l border-white/5 flex items-center gap-1 shrink-0" ref={menuRef}>
+        <div className="pl-2 md:pl-4 ml-2 md:ml-4 border-l border-white/5 flex items-center gap-1 shrink-0" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all ${

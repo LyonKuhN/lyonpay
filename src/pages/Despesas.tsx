@@ -637,7 +637,7 @@ export default function Despesas() {
                             <span className="text-sm font-black text-white">Parcela {p.parcela_atual}/{p.numero_parcelas}</span>
                             <p className="text-[9px] font-bold text-zinc-500 uppercase flex items-center gap-1">
                               <Calendar size={9}/> {formatDate(p.data_vencimento)}
-                              {p.pago && <span className="text-[#a3ff12] ml-2">✓ Paga</span>}
+                              {p.pago && <span className="text-[#a3ff12] ml-2 flex items-center gap-1"><Check size={10} /> Paga</span>}
                             </p>
                           </div>
                         </div>

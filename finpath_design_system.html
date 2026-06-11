@@ -1,0 +1,332 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+  .ds { padding: 2rem 0; color: var(--color-text-primary); }
+  .section { margin-bottom: 2.5rem; }
+  .section-title { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-secondary); margin-bottom: 1rem; padding-bottom: 8px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Color swatches */
+  .swatch-group { display: flex; flex-direction: column; gap: 4px; }
+  .swatch { width: 56px; height: 56px; border-radius: 12px; border: 0.5px solid var(--color-border-tertiary); }
+  .swatch-label { font-size: 11px; color: var(--color-text-secondary); }
+  .swatch-hex { font-size: 11px; font-weight: 500; color: var(--color-text-primary); }
+
+  /* Typography specimens */
+  .type-row { padding: 12px 16px; background: var(--color-background-secondary); border-radius: 8px; }
+  .type-meta { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 4px; }
+
+  /* Button styles */
+  .btn-primary { background: #D7FF67; color: #0A0A0A; border: none; padding: 12px 28px; border-radius: 100px; font-size: 15px; font-weight: 500; cursor: pointer; display: inline-block; }
+  .btn-secondary { background: transparent; color: var(--color-text-primary); border: 1.5px solid #D7FF67; padding: 12px 28px; border-radius: 100px; font-size: 15px; font-weight: 500; cursor: pointer; display: inline-block; }
+  .btn-ghost { background: #212121; color: #FCFCFC; border: 0.5px solid #333; padding: 12px 28px; border-radius: 100px; font-size: 15px; font-weight: 500; cursor: pointer; display: inline-block; }
+  .btn-sm { padding: 8px 18px; font-size: 13px; border-radius: 100px; background: #D7FF67; color: #0A0A0A; border: none; cursor: pointer; }
+
+  /* Input */
+  .input-demo { background: #161616; border: 1px solid #333; border-radius: 12px; padding: 12px 16px; color: #FCFCFC; font-size: 15px; width: 100%; outline: none; }
+  .input-demo::placeholder { color: #555; }
+  .input-label { font-size: 13px; color: #888; margin-bottom: 6px; display: block; }
+  .input-wrap { display: flex; flex-direction: column; max-width: 300px; }
+
+  /* Cards */
+  .card-demo { background: #161616; border: 0.5px solid #2a2a2a; border-radius: 16px; padding: 20px; max-width: 240px; }
+  .card-accent { border-top: 2px solid #D7FF67; }
+  .card-tag { display: inline-block; background: #D7FF6720; color: #D7FF67; font-size: 11px; padding: 3px 10px; border-radius: 100px; margin-bottom: 8px; }
+  .card-value { font-size: 26px; font-weight: 500; color: #FCFCFC; }
+  .card-label { font-size: 13px; color: #888; margin-top: 4px; }
+  .card-change { font-size: 13px; color: #D7FF67; margin-top: 8px; }
+
+  /* Badges */
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 100px; }
+  .badge-green { background: #D7FF6720; color: #D7FF67; }
+  .badge-red { background: #FF4B4B20; color: #FF6B6B; }
+  .badge-gray { background: #FCFCFC15; color: #FCFCFC80; }
+
+  /* Spacing */
+  .spacing-row { display: flex; align-items: flex-end; gap: 16px; }
+  .sp { background: #D7FF6730; border: 1px dashed #D7FF6780; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #D7FF67; }
+
+  /* Radius */
+  .radius-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .radius-demo { width: 56px; height: 56px; background: #212121; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .radius-meta { font-size: 10px; color: #888; text-align: center; }
+
+  hr.ds-divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 2rem 0; }
+</style>
+
+<div class="ds">
+
+  <!-- COLORS -->
+  <div class="section">
+    <div class="section-title">Cores — Paleta Principal</div>
+    <div class="row" style="margin-bottom:16px">
+      <div class="swatch-group">
+        <div class="swatch" style="background:#D7FF67; width:80px; height:80px; border-radius:16px;"></div>
+        <div class="swatch-label">Lime / CTA</div>
+        <div class="swatch-hex">#D7FF67</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#0A0A0A; width:80px; height:80px; border-radius:16px;"></div>
+        <div class="swatch-label">Black base</div>
+        <div class="swatch-hex">#0A0A0A</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#161616; width:80px; height:80px; border-radius:16px;"></div>
+        <div class="swatch-label">Surface 1</div>
+        <div class="swatch-hex">#161616</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#212121; width:80px; height:80px; border-radius:16px;"></div>
+        <div class="swatch-label">Surface 2</div>
+        <div class="swatch-hex">#212121</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#FCFCFC; width:80px; height:80px; border-radius:16px;"></div>
+        <div class="swatch-label">Text / White</div>
+        <div class="swatch-hex">#FCFCFC</div>
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:1.5rem;">Cores de Suporte</div>
+    <div class="row">
+      <div class="swatch-group">
+        <div class="swatch" style="background:#FF4B4B; border-radius:10px;"></div>
+        <div class="swatch-label">Danger</div>
+        <div class="swatch-hex">#FF4B4B</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#4BFF91; border-radius:10px;"></div>
+        <div class="swatch-label">Success</div>
+        <div class="swatch-hex">#4BFF91</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#FFB84B; border-radius:10px;"></div>
+        <div class="swatch-label">Warning</div>
+        <div class="swatch-hex">#FFB84B</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#333333; border-radius:10px;"></div>
+        <div class="swatch-label">Border</div>
+        <div class="swatch-hex">#333333</div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch" style="background:#888888; border-radius:10px;"></div>
+        <div class="swatch-label">Muted text</div>
+        <div class="swatch-hex">#888888</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="ds-divider">
+
+  <!-- TYPOGRAPHY -->
+  <div class="section">
+    <div class="section-title">Tipografia — Hierarquia</div>
+    <div class="col">
+      <div class="type-row">
+        <div class="type-meta">H1 · 56px · 500 · Geist / Inter · line-height 1.1</div>
+        <div style="font-size:36px; font-weight:500; color:#FCFCFC; letter-spacing:-0.03em;">Seu dinheiro, inteligente.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">H2 · 36px · 500 · letter-spacing -0.02em</div>
+        <div style="font-size:26px; font-weight:500; color:#FCFCFC; letter-spacing:-0.02em;">Controle total das suas finanças</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">H3 · 24px · 500 · Seção ou card title</div>
+        <div style="font-size:20px; font-weight:500; color:#FCFCFC;">Investimentos em tempo real</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">Body Large · 18px · 400 · line-height 1.6 · cor #FCFCFC / 70%</div>
+        <div style="font-size:16px; color:#FCFCFCB3; line-height:1.6;">Monitore transações, otimize gastos e tome decisões financeiras com confiança, de forma simples e eficiente.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">Body Regular · 15px · 400 · cor muted #888</div>
+        <div style="font-size:14px; color:#888;">Última atualização · 28.03.26 · Dados em tempo real</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">Label · 11px · 500 · uppercase · letter-spacing 0.08em</div>
+        <div style="font-size:11px; font-weight:500; letter-spacing:0.08em; color:#888; text-transform:uppercase;">Total balance · AI Finpath</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="ds-divider">
+
+  <!-- BUTTONS -->
+  <div class="section">
+    <div class="section-title">Botões — Variantes CTA</div>
+    <div class="row" style="align-items:center;">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+        <span class="btn-primary">Começar grátis</span>
+        <div style="font-size:11px; color:#888;">Primary CTA</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+        <span class="btn-secondary">Ver demonstração</span>
+        <div style="font-size:11px; color:#888;">Secondary</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+        <span class="btn-ghost">Saiba mais</span>
+        <div style="font-size:11px; color:#888;">Ghost dark</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+        <span class="btn-sm">Upgrade</span>
+        <div style="font-size:11px; color:#888;">Small pill</div>
+      </div>
+    </div>
+    <div style="margin-top:14px; padding:12px 16px; background:var(--color-background-secondary); border-radius:8px; font-size:13px; color:var(--color-text-secondary);">
+      Regras: border-radius 100px (pill) · hover = lime 90% opacity · active = scale(0.97) · font-weight 500 · padding 12×28px
+    </div>
+  </div>
+
+  <hr class="ds-divider">
+
+  <!-- INPUTS -->
+  <div class="section">
+    <div class="section-title">Inputs de Formulário</div>
+    <div class="row" style="align-items:flex-start;">
+      <div class="input-wrap">
+        <span class="input-label">E-mail</span>
+        <input class="input-demo" type="text" placeholder="seu@email.com" />
+        <span style="font-size:11px; color:#888; margin-top:5px;">Estado padrão · border #333</span>
+      </div>
+      <div class="input-wrap">
+        <span class="input-label">E-mail</span>
+        <input class="input-demo" type="text" placeholder="seu@email.com" style="border-color:#D7FF67; box-shadow:0 0 0 3px #D7FF6720;" />
+        <span style="font-size:11px; color:#D7FF67; margin-top:5px;">Focus · border lime · glow 20%</span>
+      </div>
+      <div class="input-wrap">
+        <span class="input-label" style="color:#FF4B4B;">E-mail</span>
+        <input class="input-demo" type="text" placeholder="Inválido" style="border-color:#FF4B4B; box-shadow:0 0 0 3px #FF4B4B20;" />
+        <span style="font-size:11px; color:#FF4B4B; margin-top:5px;">Error · border red</span>
+      </div>
+    </div>
+    <div style="margin-top:14px; padding:12px 16px; background:var(--color-background-secondary); border-radius:8px; font-size:13px; color:var(--color-text-secondary);">
+      Regras: bg #161616 · border 1px #333 · border-radius 12px · padding 12×16px · focus ring lime 20% alpha
+    </div>
+  </div>
+
+  <hr class="ds-divider">
+
+  <!-- CARDS -->
+  <div class="section">
+    <div class="section-title">Cards — Variantes</div>
+    <div class="row" style="align-items:flex-start;">
+      <div>
+        <div class="card-demo card-accent">
+          <span class="card-tag">Total Balance</span>
+          <div class="card-value">$ 44,060.00</div>
+          <div class="card-label">Atualizado hoje</div>
+          <div class="card-change">↑ +4.48% este mês</div>
+        </div>
+        <div style="font-size:11px; color:#888; margin-top:6px;">Metric card · accent top lime</div>
+      </div>
+      <div>
+        <div class="card-demo" style="max-width:220px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#212121;display:flex;align-items:center;justify-content:center;">
+              <i class="ti ti-trending-up" style="font-size:18px;color:#D7FF67;" aria-hidden="true"></i>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:500;color:#FCFCFC;">Nvidia</div>
+              <div style="font-size:11px;color:#888;">2.9221</div>
+            </div>
+          </div>
+          <div style="font-size:22px;font-weight:500;color:#FCFCFC;">+3.12%</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;">Por mês</div>
+        </div>
+        <div style="font-size:11px; color:#888; margin-top:6px;">Investment card</div>
+      </div>
+      <div>
+        <div class="card-demo" style="max-width:220px;">
+          <div style="font-size:13px;color:#888;margin-bottom:10px;">Transação recente</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #2a2a2a;">
+            <span style="font-size:14px;color:#FCFCFC;">PlayStation Network</span>
+            <span style="font-size:14px;color:#FF6B6B;">-$44.48</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+            <span style="font-size:14px;color:#FCFCFC;">Liam Hapner</span>
+            <span style="font-size:14px;color:#4BFF91;">+$280.00</span>
+          </div>
+          <div class="row" style="margin-top:10px; gap:6px;">
+            <span class="badge badge-red">Saída</span>
+            <span class="badge badge-green">Entrada</span>
+            <span class="badge badge-gray">28.03.26</span>
+          </div>
+        </div>
+        <div style="font-size:11px; color:#888; margin-top:6px;">Transaction list card</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="ds-divider">
+
+  <!-- SPACING & RADIUS -->
+  <div class="section">
+    <div class="section-title">Espaçamento</div>
+    <div class="spacing-row" style="margin-bottom:12px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="sp" style="width:8px;height:8px;">·</div>
+        <div style="font-size:11px;color:#888;">4px</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="sp" style="width:16px;height:16px;">·</div>
+        <div style="font-size:11px;color:#888;">8px</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="sp" style="width:24px;height:24px;font-size:9px;padding-top:4px;">12</div>
+        <div style="font-size:11px;color:#888;">12px</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="sp" style="width:32px;height:32px;font-size:10px;padding-top:8px;">16</div>
+        <div style="font-size:11px;color:#888;">16px</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="sp" style="width:48px;height:48px;font-size:10px;padding-top:16px;">24</div>
+        <div style="font-size:11px;color:#888;">24px</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="sp" style="width:64px;height:64px;font-size:10px;padding-top:24px;">32</div>
+        <div style="font-size:11px;color:#888;">32px</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="sp" style="width:96px;height:96px;font-size:10px;padding-top:40px;">48px</div>
+        <div style="font-size:11px;color:#888;">48px</div>
+      </div>
+    </div>
+    <div style="padding:12px 16px; background:var(--color-background-secondary); border-radius:8px; font-size:13px; color:var(--color-text-secondary);">
+      Base: 8px · Section padding: 80–120px vertical · Container max-width: 1200px · Gutter: 24px
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Arredondamento</div>
+    <div class="radius-row">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="radius-demo" style="border-radius:4px;"></div>
+        <div class="radius-meta">4px<br>Tags / badges</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="radius-demo" style="border-radius:8px;"></div>
+        <div class="radius-meta">8px<br>Inputs</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="radius-demo" style="border-radius:12px;"></div>
+        <div class="radius-meta">12px<br>Inputs form</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="radius-demo" style="border-radius:16px;"></div>
+        <div class="radius-meta">16px<br>Cards</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="radius-demo" style="border-radius:24px;"></div>
+        <div class="radius-meta">24px<br>Modais</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="radius-demo" style="border-radius:100px;"></div>
+        <div class="radius-meta">100px<br>Botões / pills</div>
+      </div>
+    </div>
+  </div>
+
+</div>
