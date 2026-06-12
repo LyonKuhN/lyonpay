@@ -9,6 +9,7 @@ import Pagamentos from './pages/Pagamentos';
 import Calendario from './pages/Calendario';
 import Config from './pages/Config';
 import Admin from './pages/Admin';
+import ResetPassword from './pages/ResetPassword';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
@@ -232,6 +233,7 @@ function AppLayout() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/verify" element={<Verify />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/receitas" element={<PrivateRoute><Receitas /></PrivateRoute>} />
           <Route path="/despesas" element={<PrivateRoute><Despesas /></PrivateRoute>} />

@@ -13,7 +13,7 @@ import { IPhoneMockup } from '../components/ui/iphone-mockup';
 export default function Landing() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<'login' | 'register' | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<'login' | 'register' | 'forgot-password' | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -123,6 +123,30 @@ export default function Landing() {
       setResendCount(nextCount);
       setCooldown((nextCount + 1) * 60); // 1->120s (2m), 2->180s (3m), etc
       setSuccessMessage('Novo código enviado para ' + formData.email);
+      setError('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.email) {
+      setError('Por favor, informe seu e-mail.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao solicitar recuperação de senha');
+      setSuccessMessage(data.message || 'Se o e-mail existir, um link de recuperação foi enviado.');
       setError('');
     } catch (err: any) {
       setError(err.message);
@@ -727,7 +751,22 @@ export default function Landing() {
                     )}
                   </div>
                 )}
-                <form onSubmit={handleAuth} className="space-y-4">
+                {isAuthModalOpen === 'forgot-password' ? (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div>
+                      <label className="text-[11px] font-bold text-[#888888] uppercase tracking-widest block mb-2 ml-1">E-mail de Recuperação</label>
+                      <input required type="email" placeholder="seu@email.com" className="w-full bg-[#0A0A0A] border border-[#333333] rounded-[12px] px-4 py-3 text-[#FCFCFC] focus:border-[#D7FF67] focus:ring-1 focus:ring-[#D7FF67]/20 outline-none transition-all placeholder:text-[#888888]" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                    </div>
+                    <button type="submit" disabled={loading} className="w-full py-3 mt-6 bg-[#D7FF67] text-[#0A0A0A] font-bold rounded-full flex justify-center items-center gap-2 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50">
+                      {loading ? <Loader2 className="animate-spin" size={20} /> : 'Enviar Link de Recuperação'}
+                    </button>
+                    <button type="button" onClick={() => { setIsAuthModalOpen('login'); setError(''); setSuccessMessage(''); }} className="w-full mt-4 py-3 bg-transparent text-[#888888] font-bold rounded-full hover:text-white transition-all text-sm">
+                      Voltar ao Login
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <form onSubmit={handleAuth} className="space-y-4">
                   {isAuthModalOpen === 'register' && (
                     <div>
                       <label className="text-[11px] font-bold text-[#888888] uppercase tracking-widest block mb-2 ml-1">Nome Completo</label>
@@ -739,7 +778,12 @@ export default function Landing() {
                     <input required type="email" placeholder="seu@email.com" className="w-full bg-[#0A0A0A] border border-[#333333] rounded-[12px] px-4 py-3 text-[#FCFCFC] focus:border-[#D7FF67] focus:ring-1 focus:ring-[#D7FF67]/20 outline-none transition-all placeholder:text-[#888888]" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-[#888888] uppercase tracking-widest block mb-2 ml-1">Senha</label>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-[11px] font-bold text-[#888888] uppercase tracking-widest block ml-1">Senha</label>
+                      {isAuthModalOpen === 'login' && (
+                        <button type="button" onClick={() => { setIsAuthModalOpen('forgot-password'); setError(''); setSuccessMessage(''); }} className="text-[10px] text-[#D7FF67] font-bold uppercase hover:text-[#c4ff33] transition-colors">Esqueci a senha</button>
+                      )}
+                    </div>
                     <input required type="password" placeholder="••••••••" className="w-full bg-[#0A0A0A] border border-[#333333] rounded-[12px] px-4 py-3 text-[#FCFCFC] focus:border-[#D7FF67] focus:ring-1 focus:ring-[#D7FF67]/20 outline-none transition-all placeholder:text-[#888888]" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
                   </div>
                   <button type="submit" disabled={loading} className="w-full py-3 mt-6 bg-[#D7FF67] text-[#0A0A0A] font-bold rounded-full flex justify-center items-center gap-2 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50">
@@ -769,12 +813,14 @@ export default function Landing() {
                     </button>
                   </>
                 )}
-                <button onClick={() => setIsAuthModalOpen(isAuthModalOpen === 'login' ? 'register' : 'login')} className="w-full mt-6 text-sm text-[#888888] hover:text-[#FCFCFC] transition-colors">
+                <button onClick={() => { setIsAuthModalOpen(isAuthModalOpen === 'login' ? 'register' : 'login'); setError(''); setSuccessMessage(''); }} className="w-full mt-6 text-sm text-[#888888] hover:text-[#FCFCFC] transition-colors">
                   {isAuthModalOpen === 'login' ? 'Não tem conta? Cadastre-se grátis' : 'Já tem conta? Entrar'}
                 </button>
               </>
             )}
-          </div>
+          </>
+        )}
+      </div>
         </div>
       )}
     </div>

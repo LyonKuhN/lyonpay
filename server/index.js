@@ -515,6 +515,78 @@ app.post('/api/auth/set-2fa', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await pool.query('SELECT id, email FROM auth.users WHERE email = $1', [email]);
+    if (result.rows.length === 0) {
+      // Retorna sucesso silenciosamente para evitar "email enumeration"
+      return res.json({ message: 'Se o e-mail existir, um link de recuperação foi enviado.' });
+    }
+    const user = result.rows[0];
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Expira em 1 hora
+
+    await pool.query(
+      'UPDATE auth.users SET reset_password_token = $1, reset_password_expires_at = $2 WHERE id = $3',
+      [token, expiresAt, user.id]
+    );
+
+    const resetLink = `${process.env.SERVICE_FQDN_LYONPAY_WEB || 'http://localhost:5173'}/reset-password?token=${token}`;
+    const htmlContent = `
+      <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
+        <h1 style="color: #a3ff12; font-size: 24px;">Recuperação de Senha</h1>
+        <p style="font-size: 16px; color: #a1a1aa;">Você solicitou a redefinição da sua senha na Lyonk. Clique no botão abaixo para criar uma nova senha:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="display: inline-block; background-color: #a3ff12; color: black; padding: 15px 30px; border-radius: 12px; font-size: 16px; font-weight: bold; text-decoration: none;">Redefinir Minha Senha</a>
+        </div>
+        <p style="font-size: 14px; color: #71717a;">Se você não solicitou isso, pode ignorar este e-mail com segurança. O link expira em 1 hora.</p>
+      </div>
+    `;
+
+    await sendEmailReliably(user.email, "Recuperação de Senha - Lyonk", htmlContent);
+
+    res.json({ message: 'Se o e-mail existir, um link de recuperação foi enviado.' });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: 'Erro ao processar solicitação.' });
+  }
+});
+
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Token e nova senha são obrigatórios.' });
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT id FROM auth.users WHERE reset_password_token = $1 AND reset_password_expires_at > NOW()',
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Link de recuperação inválido ou expirado.' });
+    }
+
+    const userId = result.rows[0].id;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await pool.query(
+      'UPDATE auth.users SET encrypted_password = $1, reset_password_token = NULL, reset_password_expires_at = NULL WHERE id = $2',
+      [hashedPassword, userId]
+    );
+
+    res.json({ message: 'Senha redefinida com sucesso!' });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: 'Erro ao redefinir a senha.' });
+  }
+});
+
 app.patch('/api/auth/me', authenticateToken, async (req, res) => {
   const { name } = req.body;
   try {
