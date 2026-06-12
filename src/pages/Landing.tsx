@@ -5,7 +5,6 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { ArrowRight, Zap, Loader2, Mail, LayoutDashboard, CreditCard, Check, Star, Shield, TrendingUp, Clock, BarChart3, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
-import { ContainerScroll } from '../components/ui/container-scroll-animation';
 import { GooeyText } from '../components/ui/gooey-text-morphing';
 import { NeuralVortexBackground } from '../components/ui/neural-vortex';
 import { SkewCard } from '../components/ui/skew-card';
@@ -147,58 +146,58 @@ export default function Landing() {
 
       {/* Hero */}
       <main className="relative pt-24 md:pt-32 pb-4 overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10 pl-6 pr-0 md:px-6 mt-4 md:mt-16 flex flex-row items-center justify-between">
+        <div className="max-w-7xl mx-auto relative z-10 px-6 mt-4 md:mt-16 flex flex-col md:flex-row items-start md:items-center justify-between md:gap-0">
           
           {/* Text Content */}
-          <div className="w-[60%] md:flex-1 z-20 pb-10 md:pb-0 text-left">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#FCFCFC] mb-6 leading-[1.1] [text-shadow:_0_0_30px_rgba(0,0,0,1),_0_0_60px_rgba(0,0,0,0.9),_0_0_90px_rgba(0,0,0,0.8)] md:[text-shadow:none]">
+          <div className="w-full md:flex-1 z-20 pb-0 text-center md:text-left flex flex-col items-center md:items-start">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#FCFCFC] mb-6 leading-[1.1] relative z-10 [text-shadow:_0_0_30px_rgba(0,0,0,1)] md:[text-shadow:none] max-w-2xl mx-auto md:mx-0">
               Gestão financeira inteligente feita simples.
             </h1>
-            <p className="text-lg text-[#FCFCFC] md:text-[#FCFCFCB3] mb-12 max-w-2xl mx-auto lg:mx-0 leading-relaxed [text-shadow:_0_0_20px_rgba(0,0,0,1),_0_0_40px_rgba(0,0,0,0.9)] md:[text-shadow:none] font-bold md:font-normal">
+            <p className="text-sm md:text-lg text-[#FCFCFCB3] mb-10 max-w-2xl mx-auto md:mx-0 leading-relaxed [text-shadow:_0_0_20px_rgba(0,0,0,1)] md:[text-shadow:none] font-normal">
               Controle suas finanças pessoais com automação, alertas e análises em tempo real. Tenha clareza total sobre seu dinheiro.
             </p>
-            <div className="flex flex-col items-start gap-3 mb-12 lg:mb-0">
+            <div className="flex flex-col items-center md:items-start gap-3 mb-12 lg:mb-0 w-full md:w-auto">
               <button
                 onClick={() => setIsAuthModalOpen('register')}
-                className="px-8 py-3 bg-[#D7FF67] text-[#0A0A0A] font-bold rounded-full hover:opacity-90 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="px-8 py-4 md:py-3 bg-[#D7FF67] text-[#0A0A0A] font-bold rounded-full hover:opacity-90 transition-all flex items-center justify-center gap-2 w-full md:w-auto text-lg md:text-base shadow-[0_0_30px_rgba(215,255,103,0.3)] md:shadow-none"
               >
                 Começar grátis <ArrowRight size={18} />
               </button>
-              <p className="text-xs text-[#888888] font-medium">
+              <p className="text-xs text-[#888888] font-medium text-center md:text-left mt-2">
                 Teste grátis por 7 dias. Sem cartão de crédito.
               </p>
             </div>
           </div>
           
           {/* Mockup */}
-          <div className="w-[50%] md:flex-1 flex justify-end perspective-[2000px] relative -mr-12 md:mr-0 z-10">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] md:w-[400px] h-[350px] md:h-[500px] bg-[#D7FF67]/10 blur-[80px] md:blur-[100px] rounded-full pointer-events-none z-0" />
+          <div className="hidden md:flex relative w-full flex-1 justify-end perspective-[2000px] z-0 opacity-100 pointer-events-auto overflow-visible">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[500px] bg-[#D7FF67]/10 blur-[100px] rounded-full pointer-events-none z-0" />
             
             <motion.div 
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="hidden sm:flex absolute left-0 lg:left-10 top-1/4 bg-[#161616] border border-[#333333] p-3 md:p-4 rounded-xl shadow-2xl items-center gap-3 md:gap-4 z-20"
+              className="flex absolute left-10 top-1/4 bg-[#161616] border border-[#333333] p-4 rounded-xl shadow-2xl items-center gap-4 z-20"
             >
-               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#D7FF67]/20 flex items-center justify-center text-[#D7FF67]">
-                 <TrendingUp size={16} className="md:w-5 md:h-5" />
+               <div className="w-10 h-10 rounded-full bg-[#D7FF67]/20 flex items-center justify-center text-[#D7FF67]">
+                 <TrendingUp size={20} />
                </div>
                <div>
-                 <p className="text-[#888888] text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Receita</p>
-                 <p className="text-[#FCFCFC] font-bold text-sm md:text-base">+R$ 1.250</p>
+                 <p className="text-[#888888] text-[10px] font-bold uppercase tracking-widest">Receita</p>
+                 <p className="text-[#FCFCFC] font-bold text-base">+R$ 1.250</p>
                </div>
             </motion.div>
 
             <motion.div 
               animate={{ y: [0, 10, 0] }}
               transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}
-              className="hidden sm:flex absolute right-0 lg:-right-4 bottom-1/4 bg-[#161616] border border-[#333333] p-3 md:p-4 rounded-xl shadow-2xl items-center gap-3 md:gap-4 z-20"
+              className="flex absolute -right-4 bottom-1/4 bg-[#161616] border border-[#333333] p-4 rounded-xl shadow-2xl items-center gap-4 z-20"
             >
-               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#0A0A0A] flex items-center justify-center text-[#FCFCFC] border border-[#333333]">
-                 <Clock size={16} className="md:w-5 md:h-5 text-[#FFD700]" />
+               <div className="w-10 h-10 rounded-full bg-[#0A0A0A] flex items-center justify-center text-[#FCFCFC] border border-[#333333]">
+                 <Clock size={20} className="text-[#FFD700]" />
                </div>
                <div>
-                 <p className="text-[#888888] text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Vencimentos</p>
-                 <p className="text-[#FCFCFC] font-bold text-sm md:text-base">0 Atrasos</p>
+                 <p className="text-[#888888] text-[10px] font-bold uppercase tracking-widest">Vencimentos</p>
+                 <p className="text-[#FCFCFC] font-bold text-base">0 Atrasos</p>
                </div>
             </motion.div>
 
@@ -209,13 +208,15 @@ export default function Landing() {
                 transformStyle: 'preserve-3d'
               }}
             >
-              <IPhoneMockup 
-                model="15-pro" 
-                color="space-black" 
-                wallpaper="/cel1.png" 
-                wallpaperFit="contain"
-                scale={0.85} 
-              />
+              <div className="scale-100 origin-center transition-transform">
+                <IPhoneMockup 
+                  model="15-pro" 
+                  color="space-black" 
+                  wallpaper="/cel1.png" 
+                  wallpaperFit="contain"
+                  scale={0.85} 
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -237,13 +238,37 @@ export default function Landing() {
             </h2>
           </div>
           
-          <GooeyText
-            texts={["Domine seu Dinheiro", "Zere os Atrasos", "Aumente o Lucro", "Ganhe Tempo", "Paz Financeira"]}
-            morphTime={1.5}
-            cooldownTime={0.3}
-            className="relative w-full h-[200px] flex items-center justify-center"
-            textClassName="font-bold"
-          />
+          <div className="relative">
+            {/* Mobile Mockup behind text transition */}
+            <div className="absolute inset-y-0 right-[-20px] left-0 flex md:hidden items-center justify-end perspective-[2000px] z-0 opacity-20 pointer-events-none">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[350px] bg-[#D7FF67]/10 blur-[80px] rounded-full z-0" />
+              <div 
+                className="transform transition-all duration-700"
+                style={{
+                  transform: 'rotateY(-20deg) rotateX(15deg) rotateZ(-5deg)',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+                <div className="scale-[0.7] sm:scale-[0.8] origin-center">
+                  <IPhoneMockup 
+                    model="15-pro" 
+                    color="space-black" 
+                    wallpaper="/cel1.png" 
+                    wallpaperFit="contain"
+                    scale={0.85} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            <GooeyText
+              texts={["Domine seu Dinheiro", "Zere os Atrasos", "Aumente o Lucro", "Ganhe Tempo", "Paz Financeira"]}
+              morphTime={1.5}
+              cooldownTime={0.3}
+              className="relative w-full h-[300px] flex items-center justify-center z-10"
+              textClassName="font-bold"
+            />
+          </div>
         </div>
       </motion.section>
 
@@ -333,38 +358,37 @@ export default function Landing() {
         </div>
       </motion.section>
 
-      {/* Dashboard Preview - Container Scroll */}
+      {/* Dashboard Preview - Simpler Mockup */}
       <motion.section 
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 0.8 }}
-        className="py-12 px-6 bg-transparent relative z-10"
+        className="py-16 md:py-24 px-6 bg-transparent relative z-10"
       >
-        <ContainerScroll
-          titleComponent={
-            <div>
-              <h2 className="text-3xl md:text-5xl font-bold text-[#FCFCFC] tracking-tight mb-4">
-                Visualize seu controle financeiro
-              </h2>
-              <p className="text-[#888888] text-lg max-w-2xl mx-auto">
-                Dashboard elegante e responsivo que centraliza todas suas finanças em um só lugar
-              </p>
-            </div>
-          }
-        >
-          <div className="relative w-full h-full flex justify-center items-center">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-[#D7FF67] text-xs font-bold uppercase tracking-widest mb-3">Visão Completa</p>
+            <h2 className="text-3xl md:text-5xl font-bold text-[#FCFCFC] tracking-tight mb-4">
+              Visualize seu controle financeiro
+            </h2>
+            <p className="text-[#888888] text-lg max-w-2xl mx-auto">
+              Dashboard elegante e responsivo que centraliza todas suas finanças em um só lugar
+            </p>
+          </div>
+          
+          <div className="relative w-full rounded-[24px] border border-[#333333] bg-[#161616]/50 p-2 md:p-4 shadow-2xl">
             <div className="absolute inset-0 bg-[#D7FF67]/5 blur-[80px] md:blur-[120px] rounded-full pointer-events-none z-0" />
             <img 
               src="/pc.png" 
               alt="Dashboard Preview" 
-              className="w-full h-full object-cover rounded-2xl relative z-10" 
+              className="w-full h-auto object-cover rounded-xl border border-[#333333] relative z-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]" 
             />
             
             <motion.div 
               animate={{ y: [0, -15, 0] }}
               transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="hidden md:flex absolute -left-8 top-1/4 bg-[#161616] border border-[#333333] p-4 rounded-xl shadow-2xl items-center gap-4 z-20"
+              className="hidden md:flex absolute -left-8 md:-left-12 top-1/4 bg-[#161616] border border-[#333333] p-4 rounded-xl shadow-2xl items-center gap-4 z-20"
             >
                <div className="w-10 h-10 rounded-full bg-[#D7FF67]/20 flex items-center justify-center text-[#D7FF67]">
                  <TrendingUp size={20} />
@@ -378,7 +402,7 @@ export default function Landing() {
             <motion.div 
               animate={{ y: [0, 15, 0] }}
               transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}
-              className="hidden md:flex absolute -right-8 bottom-1/4 bg-[#161616] border border-[#333333] p-4 rounded-xl shadow-2xl items-center gap-4 z-20"
+              className="hidden md:flex absolute -right-8 md:-right-12 bottom-1/4 bg-[#161616] border border-[#333333] p-4 rounded-xl shadow-2xl items-center gap-4 z-20"
             >
                <div className="w-10 h-10 rounded-full bg-[#0A0A0A] flex items-center justify-center text-[#FCFCFC]">
                  <Shield size={20} />
@@ -389,7 +413,7 @@ export default function Landing() {
                </div>
             </motion.div>
           </div>
-        </ContainerScroll>
+        </div>
       </motion.section>
 
       {/* Pricing */}
