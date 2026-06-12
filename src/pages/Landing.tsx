@@ -230,7 +230,7 @@ export default function Landing() {
           {/* Text Content */}
           <div className="w-full md:flex-1 z-20 pb-0 text-center md:text-left flex flex-col items-center md:items-start">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#FCFCFC] mb-6 leading-[1.1] relative z-10 [text-shadow:_0_0_30px_rgba(0,0,0,1)] md:[text-shadow:none] max-w-2xl mx-auto md:mx-0">
-              Gestão financeira inteligente feita simples.
+              Simplifique. Organize. Cresça.
             </h1>
             <p className="text-sm md:text-lg text-[#FCFCFCB3] mb-10 max-w-2xl mx-auto md:mx-0 leading-relaxed [text-shadow:_0_0_20px_rgba(0,0,0,1)] md:[text-shadow:none] font-normal">
               Controle suas finanças pessoais com automação, alertas e análises em tempo real. Tenha clareza total sobre seu dinheiro.
