@@ -11,7 +11,7 @@ interface MenuItem {
   iconColor: string
 }
 
-interface MenuBarProps extends React.HTMLAttributes<HTMLDivElement> {
+interface MenuBarProps extends Omit<React.HTMLAttributes<HTMLElement>, "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag"> {
   items: MenuItem[]
   activeItem?: string
   onItemClick?: (label: string, href: string) => void
@@ -27,7 +27,7 @@ const backVariants = {
   hover: { rotateX: 0, opacity: 1 },
 }
 
-const glowVariants = {
+const glowVariants: any = {
   initial: { opacity: 0, scale: 0.8 },
   hover: {
     opacity: 1,
@@ -39,7 +39,7 @@ const glowVariants = {
   },
 }
 
-const navGlowVariants = {
+const navGlowVariants: any = {
   initial: { opacity: 0 },
   hover: {
     opacity: 1,
@@ -50,14 +50,14 @@ const navGlowVariants = {
   },
 }
 
-const sharedTransition = {
+const sharedTransition: any = {
   type: "spring",
   stiffness: 100,
   damping: 20,
   duration: 0.5,
 }
 
-export const MenuBar = React.forwardRef<HTMLDivElement, MenuBarProps>(
+export const MenuBar = React.forwardRef<HTMLElement, MenuBarProps>(
   ({ className, items, activeItem, onItemClick, ...props }, ref) => {
     const { theme } = useTheme()
     const isDarkTheme = theme === "dark"

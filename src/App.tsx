@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, TrendingDown, TrendingUp, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck, Calendar, User } from 'lucide-react';
 import Landing from './pages/Landing';
 import Verify from './pages/Verify';
@@ -14,8 +14,6 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
 
 function FloatingNav() {
-  const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);

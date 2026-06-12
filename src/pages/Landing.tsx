@@ -7,8 +7,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 import { ContainerScroll } from '../components/ui/container-scroll-animation';
 import { GooeyText } from '../components/ui/gooey-text-morphing';
-import { EtherealShadow } from '../components/ui/ethereal-shadow';
-import { AnimatedBackground } from '../components/ui/animated-background';
 import { NeuralVortexBackground } from '../components/ui/neural-vortex';
 import { SkewCard } from '../components/ui/skew-card';
 import { IPhoneMockup } from '../components/ui/iphone-mockup';
