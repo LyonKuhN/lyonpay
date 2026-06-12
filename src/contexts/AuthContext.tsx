@@ -7,6 +7,7 @@ interface User {
   role: 'admin' | 'user';
   subscribed: boolean;
   expires_at?: string;
+  two_factor_enabled?: boolean | null;
 }
 
 interface AuthContextType {

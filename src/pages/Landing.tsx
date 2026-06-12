@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -17,6 +17,10 @@ export default function Landing() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [resendCount, setResendCount] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const hasGoogleAuth = import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_CLIENT_ID !== 'YOUR_GOOGLE_CLIENT_ID_HERE';
 
@@ -61,6 +65,13 @@ export default function Landing() {
         setSuccessMessage('Cadastro realizado! Enviamos um link de confirmação para o seu e-mail.');
         setFormData({ name: '', email: '', password: '' });
       } else {
+        if (data.requires_2fa) {
+          setRequires2FA(true);
+          setCooldown(60);
+          setResendCount(0);
+          setSuccessMessage(`Código enviado para ${data.email}`);
+          return;
+        }
         login(data.token, data.user);
         navigate('/dashboard');
       }
@@ -70,6 +81,65 @@ export default function Landing() {
       setLoading(false);
     }
   };
+
+  const handleVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-2fa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, code: twoFactorCode })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Código inválido');
+      login(data.token, data.user);
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend2FA = async () => {
+    if (resendCount >= 5) {
+      setError('Limite máximo de reenvios atingido. Tente novamente mais tarde.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-2fa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao reenviar código');
+      
+      const nextCount = resendCount + 1;
+      setResendCount(nextCount);
+      setCooldown((nextCount + 1) * 60); // 1->120s (2m), 2->180s (3m), etc
+      setSuccessMessage('Novo código enviado para ' + formData.email);
+      setError('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (cooldown > 0 && requires2FA) {
+      timer = setInterval(() => {
+        setCooldown(c => c - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown, requires2FA]);
 
   const googleLogin = hasGoogleAuth ? useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -83,6 +153,14 @@ export default function Landing() {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Erro ao autenticar com Google');
+        if (data.requires_2fa) {
+          setFormData({ ...formData, email: data.email });
+          setRequires2FA(true);
+          setCooldown(60);
+          setResendCount(0);
+          setSuccessMessage(`Código enviado para ${data.email}`);
+          return;
+        }
         login(data.token, data.user);
         setIsAuthModalOpen(null);
         navigate('/dashboard');
@@ -574,13 +652,63 @@ export default function Landing() {
                 <button 
                   onClick={() => {
                     setSuccessMessage('');
-                    setIsAuthModalOpen('login');
+                    if (requires2FA) {
+                      // Do nothing, just clear success message and they can input code
+                    } else {
+                      setIsAuthModalOpen('login');
+                    }
                   }} 
                   className="w-full py-3 bg-transparent border border-[#D7FF67] text-[#FCFCFC] font-bold rounded-full hover:bg-[#D7FF67]/5 transition-all"
                 >
-                  Ir para Login
+                  Continuar
                 </button>
               </div>
+            ) : requires2FA ? (
+              <form onSubmit={handleVerify2FA}>
+                <h2 className="text-3xl font-bold text-[#FCFCFC] mb-1">Verificação 2FA</h2>
+                <p className="text-[#888888] mb-8 text-sm">Digite o código de 6 dígitos que enviamos para o seu e-mail.</p>
+                {error && (
+                  <div className="mb-6 p-4 rounded-[12px] bg-[#FF4B4B]/15 border border-[#FF4B4B]/30 text-[#FF6B6B] text-sm flex flex-col gap-3">
+                    <p>{error}</p>
+                  </div>
+                )}
+                <div className="space-y-4 mb-8">
+                  <div>
+                    <label className="text-[10px] font-black text-[#555555] uppercase tracking-widest ml-4">Código</label>
+                    <input 
+                      type="text" 
+                      placeholder="000000"
+                      maxLength={6}
+                      className="w-full bg-[#0A0A0A] text-[#FCFCFC] p-4 rounded-full border border-[#333333] focus:border-[#D7FF67] focus:outline-none transition-colors text-center text-2xl tracking-[0.5em] font-mono"
+                      value={twoFactorCode}
+                      onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+                      required
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={loading || twoFactorCode.length < 6}
+                  className="w-full py-4 bg-[#D7FF67] text-black font-bold rounded-full hover:bg-[#c4ff33] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verificar Código'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleResend2FA}
+                  disabled={loading || cooldown > 0 || resendCount >= 5}
+                  className="w-full mt-4 py-3 bg-transparent text-[#D7FF67] font-bold rounded-full hover:bg-[#D7FF67]/5 transition-all text-sm disabled:opacity-50"
+                >
+                  {loading ? 'Aguarde...' : cooldown > 0 ? `Aguarde ${cooldown}s para reenviar` : resendCount >= 5 ? 'Limite de reenvios atingido' : 'Reenviar Código'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setRequires2FA(false); setTwoFactorCode(''); setCooldown(0); setResendCount(0); }}
+                  className="w-full mt-2 py-3 bg-transparent text-[#888888] font-bold rounded-full hover:text-white transition-all text-sm"
+                >
+                  Voltar ao Login
+                </button>
+              </form>
             ) : (
               <>
                 <h2 className="text-3xl font-bold text-[#FCFCFC] mb-1">{isAuthModalOpen === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}</h2>

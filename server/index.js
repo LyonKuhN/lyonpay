@@ -41,13 +41,63 @@ import pool from './db.js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 const resend = new Resend(process.env.RESEND_API_KEY || '');
 
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+  port: parseInt(process.env.SMTP_PORT || '465'),
+  secure: process.env.EMAIL_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+const sendEmailReliably = async (toEmail, subject, htmlContent) => {
+  console.log(`[Email] Tentando enviar e-mail para: ${toEmail}`);
+  try {
+    const { data, error } = await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'Lyonk <onboarding@resend.dev>',
+      to: toEmail,
+      subject,
+      html: htmlContent,
+    });
+    if (error) {
+      console.warn("[Resend] Falhou, tentando fallback Nodemailer. Erro:", error.message);
+      throw new Error("Resend failed");
+    }
+    console.log("[Resend] E-mail enviado com sucesso! ID:", data.id);
+  } catch (err) {
+    try {
+      console.log("[Nodemailer] Tentando enviar e-mail via SMTP...");
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'Lyonk <adm@lyonk.com.br>',
+        to: toEmail,
+        subject,
+        html: htmlContent,
+      });
+      console.log("[Nodemailer] E-mail enviado com sucesso!");
+    } catch (nodeErr) {
+      console.error("!!! FALHA CRÍTICA AO ENVIAR EMAIL (AMBOS FALHARAM):", nodeErr);
+    }
+  }
+};
+
 const app = express();
 
 // Necessário para o Coolify/Docker (Proxy Reverso) identificar o IP real do usuário
 app.set('trust proxy', 1);
 
+const allowedOrigins = process.env.SERVICE_FQDN_LYONPAY_WEB 
+  ? [`https://${process.env.SERVICE_FQDN_LYONPAY_WEB}`, `http://${process.env.SERVICE_FQDN_LYONPAY_WEB}`] 
+  : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
 app.use(cors({
-  origin: '*', 
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado por CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -62,6 +112,12 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 1000, // Aumentado para evitar bloqueios acidentais em produção
   message: { error: 'Muitas requisições vindas deste IP, tente novamente mais tarde.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // Limite estrito de 10 requisições por IP (Anti Brute-Force)
+  message: { error: 'Muitas tentativas. Bloqueio de segurança ativado por 15 minutos.' }
 });
 
 app.use('/api/', limiter); 
@@ -96,28 +152,7 @@ const sendConfirmationEmail = async (email, name, token) => {
     </div>
   `;
 
-  console.log(`[Resend] Tentando enviar e-mail para: ${email}`);
-
-  try {
-    const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Lyonk <onboarding@resend.dev>',
-      to: email,
-      subject: "Confirme seu e-mail no Lyonk! 🛡️",
-      html: htmlContent,
-    });
-    
-    if (error) {
-      console.error("!!! ERRO NO RESEND:", error);
-      // Se o erro for de domínio não verificado, logamos um aviso específico
-      if (error.message?.includes('domain') || error.name === 'validation_error') {
-        console.warn("DICA: Verifique se o domínio 'lyonpay.com' está verificado no painel do Resend.");
-      }
-    } else {
-      console.log("[Resend] E-mail enviado com sucesso! ID:", data.id);
-    }
-  } catch (err) {
-    console.error("!!! FALHA CRÍTICA AO CHAMAR API DO RESEND:", err.message);
-  }
+  await sendEmailReliably(email, "Confirme seu e-mail no Lyonk! 🛡️", htmlContent);
 };
 
 const authenticateToken = (req, res, next) => {
@@ -141,7 +176,7 @@ const isAdmin = async (req, res, next) => {
 };
 
 // --- AUTH ROUTES ---
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { email, password, name } = req.body;
   try {
     const userExist = await pool.query('SELECT id FROM auth.users WHERE email = $1', [email]);
@@ -187,24 +222,49 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/verify', async (req, res) => {
+app.post('/api/auth/verify', authLimiter, async (req, res) => {
   const { token } = req.body;
   try {
-    const result = await pool.query('UPDATE auth.users SET confirmed = true, confirmation_token = null WHERE confirmation_token = $1 RETURNING id, email, role', [token]);
+    const result = await pool.query('UPDATE auth.users SET confirmed = true, confirmation_token = null WHERE confirmation_token = $1 RETURNING id, email, role, two_factor_enabled', [token]);
     if (result.rows.length === 0) return res.status(400).json({ error: 'Token inválido' });
     const user = result.rows[0];
     const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [user.id]);
     const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [user.id]);
     const name = profile.rows[0]?.display_name || 'Usuário';
-    const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
-    res.json({ token: jwtToken, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at } });
+
+    if (user.two_factor_enabled === true) {
+      // Gerar código de 6 dígitos
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+      
+      await pool.query('UPDATE auth.users SET two_factor_code = $1, two_factor_expires_at = $2 WHERE id = $3', [code, expiresAt, user.id]);
+      
+      const htmlContent = `
+        <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
+          <h1 style="color: #a3ff12; font-size: 24px;">Código de Verificação</h1>
+          <p style="font-size: 16px; color: #a1a1aa;">Seu código de acesso (2FA) é:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; background-color: #27272a; color: #a3ff12; padding: 15px 30px; border-radius: 12px; font-size: 32px; font-weight: bold; letter-spacing: 5px;">${code}</span>
+          </div>
+          <p style="font-size: 14px; color: #71717a;">Este código expira em 10 minutos.</p>
+        </div>
+      `;
+      
+      await sendEmailReliably(user.email, "Seu Código de Acesso Lyonk 🔐", htmlContent);
+
+      return res.json({ requires_2fa: true, email: user.email });
+    }
+
+    const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '3h' });
+    res.json({ token: jwtToken, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at, two_factor_enabled: user.two_factor_enabled } });
   } catch (err) { 
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
     res.status(500).json({ error: err.message }); 
   }
 });
 
-app.post('/api/auth/resend-verification', async (req, res) => {
+app.post('/api/auth/resend-verification', authLimiter, async (req, res) => {
   const { email } = req.body;
   try {
     const result = await pool.query('SELECT * FROM auth.users WHERE email = $1', [email]);
@@ -227,7 +287,7 @@ app.post('/api/auth/resend-verification', async (req, res) => {
 });
 
 // Google OAuth
-app.post('/api/auth/google', async (req, res) => {
+app.post('/api/auth/google', authLimiter, async (req, res) => {
   const { access_token } = req.body;
   try {
     // Validar token com Google
@@ -295,8 +355,31 @@ app.post('/api/auth/google', async (req, res) => {
     const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [userData.id]);
     const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [userData.id]);
     const displayName = profile.rows[0]?.display_name || 'Usuário';
+
+    if (userData.two_factor_enabled === true) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+      
+      await pool.query('UPDATE auth.users SET two_factor_code = $1, two_factor_expires_at = $2 WHERE id = $3', [code, expiresAt, userData.id]);
+      
+      const htmlContent = `
+        <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
+          <h1 style="color: #a3ff12; font-size: 24px;">Código de Verificação</h1>
+          <p style="font-size: 16px; color: #a1a1aa;">Seu código de acesso (2FA) é:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; background-color: #27272a; color: #a3ff12; padding: 15px 30px; border-radius: 12px; font-size: 32px; font-weight: bold; letter-spacing: 5px;">${code}</span>
+          </div>
+          <p style="font-size: 14px; color: #71717a;">Este código expira em 10 minutos.</p>
+        </div>
+      `;
+      
+      await sendEmailReliably(userData.email, "Seu Código de Acesso Lyonk 🔐", htmlContent);
+
+      return res.json({ requires_2fa: true, email: userData.email });
+    }
     
-    const jwtToken = jwt.sign({ id: userData.id, email: userData.email }, JWT_SECRET);
+    const jwtToken = jwt.sign({ id: userData.id, email: userData.email }, JWT_SECRET, { expiresIn: '3h' });
     res.json({
       token: jwtToken,
       user: {
@@ -305,7 +388,8 @@ app.post('/api/auth/google', async (req, res) => {
         name: displayName,
         role: userData.role,
         subscribed: sub.rows[0]?.subscribed || false,
-        expires_at: sub.rows[0]?.expires_at
+        expires_at: sub.rows[0]?.expires_at,
+        two_factor_enabled: userData.two_factor_enabled
       }
     });
   } catch (err) {
@@ -314,7 +398,7 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
   try {
     const result = await pool.query('SELECT * FROM auth.users WHERE email = $1', [email]);
@@ -323,11 +407,108 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user.confirmed) return res.status(401).json({ error: 'Confirme seu e-mail primeiro.' });
     const validPassword = await bcrypt.compare(password, user.encrypted_password);
     if (!validPassword) return res.status(400).json({ error: 'Senha incorreta' });
+    
+    if (user.two_factor_enabled === true) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+      
+      await pool.query('UPDATE auth.users SET two_factor_code = $1, two_factor_expires_at = $2 WHERE id = $3', [code, expiresAt, user.id]);
+      
+      const htmlContent = `
+        <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
+          <h1 style="color: #a3ff12; font-size: 24px;">Código de Verificação</h1>
+          <p style="font-size: 16px; color: #a1a1aa;">Seu código de acesso (2FA) é:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; background-color: #27272a; color: #a3ff12; padding: 15px 30px; border-radius: 12px; font-size: 32px; font-weight: bold; letter-spacing: 5px;">${code}</span>
+          </div>
+          <p style="font-size: 14px; color: #71717a;">Este código expira em 10 minutos.</p>
+        </div>
+      `;
+      
+      await sendEmailReliably(email, "Seu Código de Acesso Lyonk 🔐", htmlContent);
+
+      return res.json({ requires_2fa: true, email: user.email });
+    }
+
     const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [user.id]);
     const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [user.id]);
     const name = profile.rows[0]?.display_name || 'Usuário';
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
-    res.json({ token, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at } });
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '3h' });
+    res.json({ token, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at, two_factor_enabled: user.two_factor_enabled } });
+  } catch (err) { 
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+app.post('/api/auth/verify-2fa', authLimiter, async (req, res) => {
+  const { email, code } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM auth.users WHERE email = $1', [email]);
+    if (result.rows.length === 0) return res.status(400).json({ error: 'Usuário não encontrado' });
+    const user = result.rows[0];
+
+    if (!user.two_factor_code || user.two_factor_code !== code || new Date() > new Date(user.two_factor_expires_at)) {
+      return res.status(400).json({ error: 'Código inválido ou expirado.' });
+    }
+
+    await pool.query('UPDATE auth.users SET two_factor_code = null, two_factor_expires_at = null WHERE id = $1', [user.id]);
+
+    const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [user.id]);
+    const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [user.id]);
+    const name = profile.rows[0]?.display_name || 'Usuário';
+    
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '3h' });
+    res.json({ token, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at, two_factor_enabled: true } });
+  } catch (err) { 
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+app.post('/api/auth/resend-2fa', authLimiter, async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await pool.query('SELECT id, email, two_factor_enabled FROM auth.users WHERE email = $1', [email]);
+    if (result.rows.length === 0) return res.status(400).json({ error: 'Usuário não encontrado' });
+    const user = result.rows[0];
+
+    if (!user.two_factor_enabled) {
+      return res.status(400).json({ error: '2FA não está ativado para este usuário.' });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+    
+    await pool.query('UPDATE auth.users SET two_factor_code = $1, two_factor_expires_at = $2 WHERE id = $3', [code, expiresAt, user.id]);
+    
+    const htmlContent = `
+      <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
+        <h1 style="color: #a3ff12; font-size: 24px;">Novo Código de Verificação</h1>
+        <p style="font-size: 16px; color: #a1a1aa;">Seu novo código de acesso (2FA) é:</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <span style="display: inline-block; background-color: #27272a; color: #a3ff12; padding: 15px 30px; border-radius: 12px; font-size: 32px; font-weight: bold; letter-spacing: 5px;">${code}</span>
+        </div>
+        <p style="font-size: 14px; color: #71717a;">Este código expira em 10 minutos.</p>
+      </div>
+    `;
+    
+    await sendEmailReliably(user.email, "Novo Código de Acesso Lyonk 🔐", htmlContent);
+
+    res.json({ message: 'Novo código enviado com sucesso!' });
+  } catch (err) { 
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+app.post('/api/auth/set-2fa', authenticateToken, async (req, res) => {
+  const { enabled } = req.body;
+  try {
+    await pool.query('UPDATE auth.users SET two_factor_enabled = $1 WHERE id = $2', [enabled, req.user.id]);
+    res.json({ message: 'Preferência de 2FA atualizada', enabled });
   } catch (err) { 
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
     res.status(500).json({ error: err.message }); 

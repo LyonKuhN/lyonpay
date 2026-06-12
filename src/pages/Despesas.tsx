@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Tag, Bookmark, PieChart, Wallet, Layers, ChevronDown, Edit2, Save, X, Search, Filter, Check, Calculator } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Tag, Bookmark, PieChart, Wallet, Layers, ChevronDown, Edit2, X, Search, Filter, Check, Calculator } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -36,8 +36,6 @@ export default function Despesas() {
   // Estado para controlar se o valor inserido é o total ou da parcela
   const [parcelInputMode, setParcelInputMode] = useState<'parcela' | 'total'>('parcela');
   const [rawAmount, setRawAmount] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingValue, setEditingValue] = useState<string>('');
   const [editItem, setEditItem] = useState<any>(null);
 
   const emptyForm = {
@@ -124,13 +122,6 @@ export default function Despesas() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['despesas'] })
   });
 
-  const updateValor = useMutation({
-    mutationFn: ({ id, valor }: { id: string; valor: number }) => apiFetch(`/api/despesas/${id}/valor`, { method: 'PATCH', body: JSON.stringify({ valor }) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['despesas'] });
-      setEditingId(null);
-    }
-  });
 
   const togglePago = useMutation({
     mutationFn: ({ id, isPago }: { id: string; isPago: boolean }) => apiFetch(`/api/despesas/${id}/${isPago ? 'pendente' : 'pagar'}`, { method: 'PATCH' }),
@@ -154,12 +145,6 @@ export default function Despesas() {
   const handleDelete = (id: string) => {
     if (!confirm('Excluir esta despesa?')) return;
     deleteDespesa.mutate(id);
-  };
-
-  const handleUpdateValor = (id: string) => {
-    const valorNum = parseFloat(editingValue.replace(',', '.'));
-    if (isNaN(valorNum)) return;
-    updateValor.mutate({ id, valor: valorNum });
   };
 
   const handleTogglePago = (id: string, isPago: boolean) => {

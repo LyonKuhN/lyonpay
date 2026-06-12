@@ -12,7 +12,8 @@ import Admin from './pages/Admin';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
+import { API_BASE_URL } from './config/api';
 
 function FloatingNav() {
   const { user, logout } = useAuth();
@@ -165,9 +166,37 @@ function PrivateRoute({ children, allowExpired = false }: { children: React.Reac
 
 function AppLayout() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, updateUser, token } = useAuth();
   const { theme } = useTheme();
   const isLanding = location.pathname === '/';
+  const [show2FAPrompt, setShow2FAPrompt] = useState(false);
+
+  useEffect(() => {
+    if (user && (user.two_factor_enabled === null || user.two_factor_enabled === undefined) && !isLanding) {
+      setShow2FAPrompt(true);
+    }
+  }, [user, isLanding]);
+
+  const handleSet2FA = async (enabled: boolean) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/set-2fa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ enabled })
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro na requisição');
+      }
+      if (user) {
+        updateUser({ ...user, two_factor_enabled: enabled });
+      }
+      setShow2FAPrompt(false);
+      toast.success(enabled ? 'Segurança de 2FA ativada!' : 'Você pode ativar mais tarde.');
+    } catch (err: any) {
+      toast.error('Erro ao salvar preferência: ' + (err.message || ''));
+    }
+  };
 
   // Forçar Landing Page a ser sempre Dark Mode na raiz do HTML
   useEffect(() => {
@@ -212,6 +241,38 @@ function AppLayout() {
           <Route path="/admin" element={<PrivateRoute>{user?.role === 'admin' ? <Admin /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
         </Routes>
       </main>
+
+      {show2FAPrompt && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-[#15151A] rounded-3xl w-full max-w-md p-8 border border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[100px] bg-[#a3ff12]/20 blur-[80px] rounded-full pointer-events-none" />
+            <div className="flex flex-col items-center text-center relative z-10">
+              <div className="w-16 h-16 rounded-full bg-[#a3ff12]/10 flex items-center justify-center mb-6 border border-[#a3ff12]/20">
+                <ShieldCheck className="text-[#a3ff12]" size={32} />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-3">Proteção em Duas Etapas</h2>
+              <p className="text-zinc-400 mb-8 text-sm leading-relaxed">
+                Para aumentar a segurança das suas finanças, recomendamos ativar a Verificação em Duas Etapas (2FA). Sempre que fizer login, você receberá um código no seu e-mail.
+              </p>
+              <div className="flex flex-col gap-3 w-full">
+                <button
+                  onClick={() => handleSet2FA(true)}
+                  className="w-full py-4 rounded-2xl bg-[#a3ff12] text-black font-bold uppercase tracking-wider text-xs hover:bg-[#b4ff3d] transition-all"
+                >
+                  Sim, Ativar Proteção
+                </button>
+                <button
+                  onClick={() => handleSet2FA(false)}
+                  className="w-full py-4 rounded-2xl bg-white/5 text-zinc-400 font-bold uppercase tracking-wider text-xs hover:bg-white/10 hover:text-white transition-all"
+                >
+                  Não, Obrigado
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster 
         position="top-right" 
         toastOptions={{

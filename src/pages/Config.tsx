@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, CreditCard, AlertTriangle, CheckCircle2, Trash2, Loader2, Save, Sparkles, PartyPopper } from 'lucide-react';
+import { User, CreditCard, AlertTriangle, CheckCircle2, Trash2, Loader2, Save, Sparkles, PartyPopper, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -10,8 +10,6 @@ export default function Config() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [cupom, setCupom] = useState('');
   const [applyingCupom, setApplyingCupom] = useState(false);
   const [cupomMessage, setCupomMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null);
@@ -19,6 +17,7 @@ export default function Config() {
   const [deleting, setDeleting] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
+  const [toggling2FA, setToggling2FA] = useState(false);
   const [name, setName] = useState(user?.name || '');
 
   useEffect(() => {
@@ -130,6 +129,26 @@ export default function Config() {
     finally { setDeleting(false); }
   };
 
+  const handleToggle2FA = async (enabled: boolean) => {
+    setToggling2FA(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/set-2fa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ enabled })
+      });
+      if (!response.ok) throw new Error('Erro ao atualizar 2FA');
+      if (user) {
+        updateUser({ ...user, two_factor_enabled: enabled });
+      }
+      toast.success(enabled ? 'Proteção 2FA ativada com sucesso!' : 'Proteção 2FA desativada.');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao alterar preferência');
+    } finally {
+      setToggling2FA(false);
+    }
+  };
+
   const now = new Date();
   const expiresAt = user?.expires_at ? new Date(user.expires_at) : null;
   const isExpired = user?.role !== 'admin' && expiresAt ? expiresAt < now : false;
@@ -199,6 +218,34 @@ export default function Config() {
           {updating ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
           SALVAR ALTERAÇÕES
         </button>
+      </section>
+
+      {/* Segurança */}
+      <section className="bg-[#15151A] border border-white/5 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-8 relative z-10 text-center md:text-left">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#a3ff12]/10 flex items-center justify-center border border-[#a3ff12]/20 shrink-0">
+            <ShieldCheck size={24} className="text-[#a3ff12]" />
+          </div>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Segurança</h2>
+            <p className="text-[10px] md:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">Autenticação e Senha</p>
+          </div>
+        </div>
+
+        <div className="bg-black/40 border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 text-center md:text-left mb-8">
+          <div>
+            <h3 className="text-xl font-black text-white mb-2">Autenticação em Duas Etapas (2FA)</h3>
+            <p className="text-sm text-zinc-400">Receba um código de 6 dígitos no seu e-mail sempre que fizer login para garantir que só você acesse a conta.</p>
+          </div>
+          <button 
+            onClick={() => handleToggle2FA(!user?.two_factor_enabled)}
+            disabled={toggling2FA}
+            className={`w-full md:w-auto px-8 py-4 font-black rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${user?.two_factor_enabled ? 'bg-white/5 text-[#FF4D4D] hover:bg-[#FF4D4D]/10 border border-[#FF4D4D]/20' : 'bg-[#a3ff12] text-black hover:scale-105 shadow-[0_10px_30px_rgba(163,255,18,0.2)]'}`}
+          >
+            {toggling2FA ? <Loader2 className="animate-spin" size={20} /> : user?.two_factor_enabled ? 'DESATIVAR 2FA' : 'ATIVAR 2FA'}
+          </button>
+        </div>
+
       </section>
 
       {/* Assinatura */}
