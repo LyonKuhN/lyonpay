@@ -86,7 +86,10 @@ export default function Config() {
     finally { setDeleting(false); }
   };
 
-  const isExpired = user?.expires_at ? new Date(user.expires_at) < new Date() : false;
+  const now = new Date();
+  const expiresAt = user?.expires_at ? new Date(user.expires_at) : null;
+  const isExpired = expiresAt ? expiresAt < now : false;
+  const daysLeft = expiresAt && !isExpired ? Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 max-w-4xl mx-auto pt-6 pb-20 space-y-8 px-4">
@@ -122,7 +125,7 @@ export default function Config() {
       )}
 
       {/* Perfil do Usuário */}
-      <section className="bg-[#15151A]/60 border border-white/5 rounded-[2.5rem] p-8 md:p-10 backdrop-blur-md shadow-2xl relative overflow-hidden group">
+      <section className="bg-[#15151A] border border-white/5 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#a3ff12]/5 blur-[100px] rounded-full -mr-32 -mt-32 transition-all group-hover:bg-[#a3ff12]/10" />
         
         <div className="flex items-center gap-4 mb-10 relative z-10">
@@ -154,7 +157,7 @@ export default function Config() {
         <button 
           onClick={handleUpdateProfile}
           disabled={updating}
-          className="mt-10 px-10 py-5 bg-[#a3ff12] text-black font-black rounded-2xl hover:scale-105 transition-all shadow-2xl flex items-center gap-3 disabled:opacity-50"
+          className="mt-8 md:mt-10 px-8 md:px-10 py-4 md:py-5 w-full md:w-auto bg-[#a3ff12] text-black font-black rounded-2xl hover:scale-105 transition-all shadow-2xl flex items-center justify-center md:justify-start gap-3 disabled:opacity-50"
         >
           {updating ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
           SALVAR ALTERAÇÕES
@@ -162,7 +165,7 @@ export default function Config() {
       </section>
 
       {/* Assinatura */}
-      <section className="bg-gradient-to-br from-[#1C1C21] to-[#15151A] border border-white/5 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group shadow-2xl">
+      <section className="bg-gradient-to-br from-[#1C1C21] to-[#15151A] border border-white/5 rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden group shadow-2xl">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#a3ff12]/5 blur-[100px] rounded-full -mr-32 -mt-32" />
         
         <div className="flex items-center gap-4 mb-10 relative z-10">
@@ -175,7 +178,7 @@ export default function Config() {
           </div>
         </div>
         
-        <div className="bg-black/40 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+        <div className="bg-black/40 border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 relative z-10 text-center md:text-left">
           {user?.subscribed ? (
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 rounded-full bg-[#a3ff12]/20 flex items-center justify-center text-[#a3ff12] border border-[#a3ff12]/30 shadow-[0_0_20px_rgba(163,255,18,0.2)]">
@@ -194,15 +197,20 @@ export default function Config() {
               <div>
                 <div className="inline-flex px-3 py-1 bg-[#a3ff12]/10 text-[#a3ff12] rounded-lg text-[10px] font-black uppercase tracking-widest mb-3">CONTA GRATUITA</div>
                 <h3 className="text-2xl font-black text-white mb-1">Acesso Ilimitado Pro</h3>
-                <p className="text-sm text-zinc-500 font-medium">Libere todos os recursos por apenas R$ 17,90/mês</p>
+                <p className="text-sm text-zinc-500 font-medium mb-2">Libere todos os recursos por apenas R$ 17,90/mês</p>
+                {expiresAt && !isExpired && (
+                  <p className="text-sm text-[#a3ff12] font-black mt-2">
+                    {daysLeft} {daysLeft === 1 ? 'dia restante' : 'dias restantes'} de teste gratuito
+                  </p>
+                )}
               </div>
               <button 
                 onClick={handleSubscribe}
                 disabled={subscribing}
-                className="px-10 py-5 bg-[#635BFF] hover:bg-[#635BFF]/90 text-white font-black rounded-2xl transition-all shadow-[0_10px_30px_rgba(99,91,255,0.3)] flex items-center justify-center gap-3 disabled:opacity-50"
+                className="w-full md:w-auto px-8 md:px-10 py-4 md:py-5 bg-[#635BFF] hover:bg-[#635BFF]/90 text-white font-black rounded-2xl transition-all shadow-[0_10px_30px_rgba(99,91,255,0.3)] flex items-center justify-center gap-3 disabled:opacity-50"
               >
                 {subscribing ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-                {isExpired ? 'RENOVAR ASSINATURA' : 'ASSINAR VIA STRIPE'}
+                {isExpired ? 'RENOVAR ASSINATURA' : 'ASSINAR'}
               </button>
             </>
           )}
@@ -210,7 +218,7 @@ export default function Config() {
       </section>
 
       {/* Zona de Perigo */}
-      <section className="bg-[#FF4D4D]/5 border border-[#FF4D4D]/20 rounded-[2.5rem] p-8 md:p-10 backdrop-blur-md shadow-2xl relative overflow-hidden">
+      <section className="bg-[#FF4D4D]/5 border border-[#FF4D4D]/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
         <div className="flex items-center gap-4 mb-10">
           <div className="w-14 h-14 rounded-2xl bg-[#FF4D4D]/10 flex items-center justify-center border border-[#FF4D4D]/20">
             <AlertTriangle size={28} className="text-[#FF4D4D]" />
@@ -221,14 +229,14 @@ export default function Config() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-8 bg-black/40 border border-[#FF4D4D]/10 rounded-3xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 md:p-8 bg-black/40 border border-[#FF4D4D]/10 rounded-3xl text-center md:text-left">
           <div>
             <p className="font-black text-white text-lg">Apagar todos os dados</p>
             <p className="text-sm text-zinc-500 font-medium">Isso removerá permanentemente seu histórico financeiro.</p>
           </div>
           <button 
             onClick={() => setIsDeleteModalOpen(true)}
-            className="px-8 py-4 bg-[#FF4D4D]/10 text-[#FF4D4D] hover:bg-[#FF4D4D] hover:text-white border border-[#FF4D4D]/30 rounded-xl font-black transition-all flex items-center justify-center gap-2"
+            className="w-full md:w-auto px-6 md:px-8 py-4 bg-[#FF4D4D]/10 text-[#FF4D4D] hover:bg-[#FF4D4D] hover:text-white border border-[#FF4D4D]/30 rounded-xl font-black transition-all flex items-center justify-center gap-2"
           >
             <Trash2 size={20} /> DELETAR CONTA
           </button>

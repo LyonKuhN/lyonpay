@@ -121,7 +121,10 @@ export function NeuralVortexBackground() {
     const uPointerPosition = gl.getUniformLocation(program, 'u_pointer_position');
     const uScrollProgress = gl.getUniformLocation(program, 'u_scroll_progress');
 
+    let lastWidth = window.innerWidth;
     const resizeCanvas = () => {
+      if (window.innerWidth === lastWidth && canvasEl.width !== 0) return;
+      lastWidth = window.innerWidth;
       const devicePixelRatio = Math.min(window.devicePixelRatio, 2);
       canvasEl.width = window.innerWidth * devicePixelRatio;
       canvasEl.height = window.innerHeight * devicePixelRatio;
@@ -131,6 +134,12 @@ export function NeuralVortexBackground() {
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+    canvasEl.addEventListener('webglcontextlost', handleContextLost, false);
 
     const render = () => {
       const currentTime = performance.now();
@@ -164,12 +173,13 @@ export function NeuralVortexBackground() {
     };
 
     window.addEventListener('pointermove', handleMouseMove as any);
-    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('pointermove', handleMouseMove as any);
       window.removeEventListener('touchmove', handleTouchMove);
+      canvasEl.removeEventListener('webglcontextlost', handleContextLost);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       gl.deleteProgram(program);
       gl.deleteShader(vertexShader);
