@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Tag, Loader2, Sparkles, TrendingUp, Receipt, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowDown, DollarSign, Receipt, TrendingUp, Calendar, Tag, ChevronDown, Plus, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import toast from 'react-hot-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '../services/api';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
 
 export default function Receitas() {
   const { token } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [receitas, setReceitas] = useState<any[]>([]);
-  const [categorias, setCategorias] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   
@@ -18,57 +20,70 @@ export default function Receitas() {
     categoria: 'Salário'
   });
 
-  const [newCat, setNewCat] = useState({ nome: '', cor: '#a3ff12' });
-
+  const [newCat, setNewCat] = useState({ nome: '', cor: '#a3ff12', tipo: 'receita' });
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [resRec, resCat] = await Promise.all([
-        fetch(API_BASE_URL + '/api/receitas', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(API_BASE_URL + '/api/categorias', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      const dataRec = await resRec.json();
-      const dataCat = await resCat.json();
-      setReceitas(dataRec);
-      setCategorias(dataCat.filter((c: any) => c.tipo === 'receita'));
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
+  // Filtros Avançados
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterValorMin, setFilterValorMin] = useState('');
+  const [filterValorMax, setFilterValorMax] = useState('');
 
-  useEffect(() => { if (token) fetchData(); }, [token]);
+  const { data: receitas = [], isLoading: isLoadingReceitas } = useQuery({
+    queryKey: ['receitas'],
+    queryFn: () => apiFetch('/api/receitas'),
+    enabled: !!token
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const { data: allCategorias = [], isLoading: isLoadingCats } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: () => apiFetch('/api/categorias'),
+    enabled: !!token
+  });
+  
+  const categorias = allCategorias.filter((c: any) => c.tipo === 'receita');
+  const loading = isLoadingReceitas || isLoadingCats;
+
+  const createReceita = useMutation({
+    mutationFn: (data: any) => apiFetch('/api/receitas', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receitas'] });
+      toast.success('Receita adicionada com sucesso!');
+      setIsModalOpen(false);
+      setFormData({ descricao: '', valor: '', data_recebimento: new Date().toISOString().split('T')[0], categoria: '' });
+    },
+    onError: () => {
+      toast.error('Erro ao adicionar receita');
+    }
+  });
+
+  const createCategoria = useMutation({
+    mutationFn: (data: any) => apiFetch('/api/categorias', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+      toast.success('Categoria criada!');
+      setIsCatModalOpen(false);
+      setNewCat({ nome: '', tipo: 'receita', cor: '#a3ff12' });
+    },
+    onError: () => {
+      toast.error('Erro ao criar categoria');
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await fetch(API_BASE_URL + '/api/receitas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData)
-      });
-      if (response.ok) {
-        setIsModalOpen(false);
-        fetchData();
-        setFormData({ ...formData, descricao: '', valor: '' });
-      }
-    } catch (err) { console.error(err); }
+    createReceita.mutate({ ...formData, valor: Number(formData.valor) });
   };
 
-  const handleAddCategory = async () => {
-    if (!newCat.nome) return;
-    try {
-      const response = await fetch(API_BASE_URL + '/api/categorias', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ ...newCat, tipo: 'receita', icone: 'TrendingUp' })
-      });
-      if (response.ok) {
-        setIsCatModalOpen(false);
-        setNewCat({ nome: '', cor: '#a3ff12' });
-        fetchData();
-      }
-    } catch (err) { console.error(err); }
+  const handleAddCategory = () => {
+    if (!newCat.nome.trim()) return;
+    createCategoria.mutate(newCat);
   };
 
   const toggleGroup = (key: string) => {
@@ -79,9 +94,22 @@ export default function Receitas() {
     });
   };
 
-  // Cálculos para CARDS
-  const totalRecebido = receitas.reduce((a, c) => a + Number(c.valor), 0);
-  const mediaReceita = receitas.length > 0 ? totalRecebido / receitas.length : 0;
+  const filteredReceitas = receitas.filter((r: any) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!r.descricao?.toLowerCase().includes(q) && !r.valor?.toString().includes(q)) return false;
+    }
+    if (filterCategoria && r.categoria !== filterCategoria) return false;
+    
+    const valor = Number(r.valor);
+    if (filterValorMin && valor < Number(filterValorMin)) return false;
+    if (filterValorMax && valor > Number(filterValorMax)) return false;
+    
+    return true;
+  });
+
+  const totalRecebido = filteredReceitas.reduce((a: number, c: any) => a + Number(c.valor), 0);
+  const mediaReceita = filteredReceitas.length > 0 ? totalRecebido / filteredReceitas.length : 0;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 max-w-6xl mx-auto pt-4 pb-20 px-4 md:px-6">
@@ -99,7 +127,6 @@ export default function Receitas() {
         </button>
       </header>
 
-      {/* CARDS DE RESUMO (RESTAURADOS) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
         <div className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-[#15151A] border border-[#a3ff12]/10 shadow-xl flex flex-col justify-between">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[#a3ff12]/10 flex items-center justify-center text-[#a3ff12] mb-3"><TrendingUp className="w-4 h-4" /></div>
@@ -113,7 +140,7 @@ export default function Receitas() {
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 mb-3"><Receipt className="w-4 h-4" /></div>
           <div>
             <p className="text-zinc-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1">Qtd Entradas</p>
-            <h2 className="text-lg md:text-2xl font-black text-white leading-tight">{receitas.length}</h2>
+            <h2 className="text-lg md:text-2xl font-black text-white leading-tight">{filteredReceitas.length}</h2>
           </div>
         </div>
 
@@ -126,7 +153,7 @@ export default function Receitas() {
         </div>
 
         <div className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-[#a3ff12]/10 to-transparent border border-[#a3ff12]/20 shadow-xl flex flex-col justify-between">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[#a3ff12] flex items-center justify-center text-black shadow-lg mb-3"><Sparkles className="w-4 h-4" /></div>
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[#a3ff12] flex items-center justify-center text-black shadow-lg mb-3"><ArrowDown className="w-4 h-4" /></div>
           <div>
             <p className="text-[#a3ff12] text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1">Previsão</p>
             <h2 className="text-lg md:text-2xl font-black text-white leading-tight">+R$ {(totalRecebido * 1.1).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</h2>
@@ -134,17 +161,55 @@ export default function Receitas() {
         </div>
       </div>
 
-      {/* Agrupamento por Ano e Mês */}
+      <div className="mb-6 bg-[#15151A] p-4 rounded-2xl border border-white/5 flex flex-col lg:flex-row gap-4 relative z-20">
+        <div className="flex-1">
+          <input 
+            type="text" 
+            placeholder="Buscar por descrição ou valor..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <select 
+            value={filterCategoria} 
+            onChange={(e) => setFilterCategoria(e.target.value)}
+            className="w-full sm:w-auto bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
+          >
+            <option value="">Todas as Categorias</option>
+            {categorias.map((c: any) => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+          </select>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input 
+              type="number" 
+              placeholder="Min (R$)" 
+              value={filterValorMin}
+              onChange={(e) => setFilterValorMin(e.target.value)}
+              className="w-full sm:w-24 bg-black/40 border border-white/10 rounded-xl px-3 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+            />
+            <span className="text-zinc-500 font-bold">-</span>
+            <input 
+              type="number" 
+              placeholder="Max (R$)" 
+              value={filterValorMax}
+              onChange={(e) => setFilterValorMax(e.target.value)}
+              className="w-full sm:w-24 bg-black/40 border border-white/10 rounded-xl px-3 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-6">
         {loading ? (
           <div className="py-40 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={48} /></div>
-        ) : receitas.length === 0 ? (
+        ) : filteredReceitas.length === 0 ? (
           <div className="py-40 text-center bg-white/[0.01] border-2 border-dashed border-white/5 rounded-[4rem]">
             <p className="text-zinc-500 font-black uppercase tracking-[0.4em]">Nenhuma receita</p>
           </div>
         ) : (() => {
           const byYearMonth: Record<string, Record<string, any[]>> = {};
-          receitas.forEach(exp => {
+          for (const exp of filteredReceitas) {
             let year = "Sem Data";
             let month = "00";
             if (exp.data_recebimento) {
@@ -155,12 +220,11 @@ export default function Receitas() {
             if (!byYearMonth[year]) byYearMonth[year] = {};
             if (!byYearMonth[year][month]) byYearMonth[year][month] = [];
             byYearMonth[year][month].push(exp);
-          });
+          }
 
           return Object.keys(byYearMonth).sort((a,b) => b.localeCompare(a)).map(year => (
             <div key={`year-${year}`} className="bg-[#15151A] rounded-[2rem] border border-white/5 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
               
-              {/* Year Header */}
               <button onClick={() => toggleGroup(`year-${year}`)} className="w-full p-6 md:p-8 flex items-center justify-between hover:bg-white/5 transition-colors group relative z-10">
                 <div className="flex items-center gap-4">
                   <div className="w-1.5 h-8 bg-[#a3ff12] rounded-full shadow-[0_0_15px_rgba(163,255,18,0.4)]" />
@@ -173,7 +237,6 @@ export default function Receitas() {
 
               {expandedGroups.has(`year-${year}`) && (
                 <div className="border-t border-white/5 bg-black/10 relative">
-                  {/* Timeline Line */}
                   <div className="absolute left-8 md:left-11 top-0 bottom-0 w-px bg-white/5 z-0" />
 
                   <div className="space-y-2 pb-6">
@@ -237,18 +300,35 @@ export default function Receitas() {
             
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-2">Descrição</label>
-                <input required value={formData.descricao} onChange={e => setFormData({...formData, descricao: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-[#a3ff12] outline-none" placeholder="Ex: Salário, Venda de Carro..." />
+                <Input 
+                  label="Descrição"
+                  required 
+                  value={formData.descricao} 
+                  onChange={e => setFormData({...formData, descricao: e.target.value})} 
+                  placeholder="Ex: Salário, Venda de Carro..." 
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-2">Valor</label>
-                  <input required type="number" step="0.01" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-[#a3ff12] outline-none" placeholder="0,00" />
+                  <Input 
+                    label="Valor"
+                    required 
+                    type="number" 
+                    step="0.01" 
+                    value={formData.valor} 
+                    onChange={e => setFormData({...formData, valor: e.target.value})} 
+                    placeholder="0,00" 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-2">Data</label>
-                  <input required type="date" value={formData.data_recebimento} onChange={e => setFormData({...formData, data_recebimento: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-[#a3ff12] outline-none" />
+                  <Input 
+                    label="Data"
+                    required 
+                    type="date" 
+                    value={formData.data_recebimento} 
+                    onChange={e => setFormData({...formData, data_recebimento: e.target.value})} 
+                  />
                 </div>
               </div>
 
@@ -258,14 +338,14 @@ export default function Receitas() {
                   <button type="button" onClick={() => setIsCatModalOpen(true)} className="text-[10px] font-black text-[#a3ff12] uppercase">+ Criar Nova</button>
                 </div>
                 <select value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-[#a3ff12] outline-none appearance-none">
-                  {categorias.map(cat => <option key={cat.id} value={cat.nome}>{cat.nome}</option>)}
+                  {categorias.map((cat: any) => <option key={cat.id} value={cat.nome}>{cat.nome}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="flex gap-4 mt-10">
-              <button type="submit" className="flex-1 py-5 bg-[#a3ff12] text-black font-black rounded-2xl hover:scale-105 transition-all shadow-2xl">CADASTRAR</button>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-5 bg-white/5 text-white font-black rounded-2xl">CANCELAR</button>
+              <Button type="submit" className="flex-1" isLoading={createReceita.isPending}>CADASTRAR</Button>
+              <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>CANCELAR</Button>
             </div>
           </form>
         </div>
@@ -279,10 +359,16 @@ export default function Receitas() {
             <h2 className="text-2xl font-black text-white mb-8">Nova Categoria</h2>
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Nome</label>
-                <input value={newCat.nome} onChange={e => setNewCat({...newCat, nome: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold" placeholder="Ex: Dividendos, Extra..." />
+                <Input 
+                  label="Nome"
+                  value={newCat.nome} 
+                  onChange={e => setNewCat({...newCat, nome: e.target.value})} 
+                  placeholder="Ex: Dividendos, Extra..." 
+                />
               </div>
-              <button onClick={handleAddCategory} className="w-full py-4 bg-[#a3ff12] text-black font-black rounded-xl hover:scale-105 transition-all">CRIAR CATEGORIA</button>
+              <Button className="w-full" onClick={handleAddCategory} isLoading={createCategoria.isPending}>
+                CRIAR CATEGORIA
+              </Button>
             </div>
           </div>
         </div>

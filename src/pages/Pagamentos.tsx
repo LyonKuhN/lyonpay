@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Calendar, CheckCircle2, Loader2, ChevronLeft, ChevronRight, Zap, Info, Check, RotateCcw, AlertTriangle, DollarSign, Tag, X, PieChart, Wallet, Layers, ArrowUp, ArrowDown, Edit2, Save } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { apiFetch } from '../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -11,11 +12,7 @@ const formatDate = (dateStr: string) => {
 
 export default function Pagamentos() {
   const { token } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [despesas, setDespesas] = useState<any[]>([]);
-  const [prevMonthDespesas, setPrevMonthDespesas] = useState<any[]>([]);
-  const [atrasadas, setAtrasadas] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const [activeTab, setActiveTab] = useState<'pendentes' | 'pagas'>('pendentes');
@@ -23,6 +20,14 @@ export default function Pagamentos() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  
+  const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
+
+  // Filtros Avançados
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterValorMin, setFilterValorMin] = useState('');
+  const [filterValorMax, setFilterValorMax] = useState('');
 
   const getRelativeTime = (dateStr: string) => {
     const today = new Date();
@@ -38,89 +43,65 @@ export default function Pagamentos() {
     return { text: `Atrasado há ${absDays} ${absDays === 1 ? 'dia' : 'dias'}`, color: 'text-[#FF4D4D] font-black' };
   };
 
-  const fetchPagamentos = async () => {
-    setLoading(true);
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
-    const prevMonth = prevDate.getMonth() + 1;
-    const prevYear = prevDate.getFullYear();
+  const month = currentDate.getMonth() + 1;
+  const year = currentDate.getFullYear();
+  const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1);
+  const prevMonth = prevDate.getMonth() + 1;
+  const prevYear = prevDate.getFullYear();
 
-    try {
-      const resCurrent = await fetch(`${API_BASE_URL}/api/despesas?month=${month}&year=${year}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const dataCurrent = await resCurrent.json();
-      setDespesas(dataCurrent);
+  const { data: despesasRaw = [], isLoading: load1 } = useQuery({ queryKey: ['despesas', year, month], queryFn: () => apiFetch(`/api/despesas?month=${month}&year=${year}`), enabled: !!token });
+  const { data: prevMonthDespesasRaw = [], isLoading: load2 } = useQuery({ queryKey: ['despesas', prevYear, prevMonth], queryFn: () => apiFetch(`/api/despesas?month=${prevMonth}&year=${prevYear}`), enabled: !!token });
+  const { data: atrasadasRaw = [], isLoading: load3 } = useQuery({ queryKey: ['despesas', 'atrasadas'], queryFn: () => apiFetch('/api/despesas/atrasadas'), enabled: !!token });
+  const { data: categoriasAll = [], isLoading: load4 } = useQuery({ queryKey: ['categorias'], queryFn: () => apiFetch('/api/categorias'), enabled: !!token });
 
-      const resPrev = await fetch(`${API_BASE_URL}/api/despesas?month=${prevMonth}&year=${prevYear}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const dataPrev = await resPrev.json();
-      setPrevMonthDespesas(dataPrev);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
+  const despesas = Array.isArray(despesasRaw) ? despesasRaw : [];
+  const prevMonthDespesas = Array.isArray(prevMonthDespesasRaw) ? prevMonthDespesasRaw : [];
+  const atrasadas = Array.isArray(atrasadasRaw) ? atrasadasRaw : [];
+  const categorias = Array.isArray(categoriasAll) ? categoriasAll.filter((c: any) => c.tipo === 'despesa') : [];
 
-  const fetchAtrasadas = async () => {
-    try {
-      const response = await fetch(API_BASE_URL + '/api/despesas/atrasadas', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setAtrasadas(data);
-    } catch (err) { console.error(err); }
-  };
+  const loading = load1 || load2 || load3 || load4;
 
-  useEffect(() => {
-    if (token) {
-      fetchPagamentos();
-      fetchAtrasadas();
+  const togglePagoMutation = useMutation({
+    mutationFn: ({ id, isPago }: { id: string; isPago: boolean }) => apiFetch(`/api/despesas/${id}/${isPago ? 'pendente' : 'pagar'}`, { method: 'PATCH' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
     }
-  }, [token, currentDate]);
+  });
 
-  const handlePagar = async (id: string) => {
-    setDespesas(prev => prev.map(d => d.id === id ? { ...d, isAnimating: true } : d));
-    setTimeout(async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/pagar`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) { fetchPagamentos(); fetchAtrasadas(); }
-      } catch (err) { console.error(err); setDespesas(prev => prev.map(d => d.id === id ? { ...d, isAnimating: false } : d)); }
-    }, 400);
-  };
+  const updateValor = useMutation({
+    mutationFn: ({ id, valor }: { id: string; valor: number }) => apiFetch(`/api/despesas/${id}/valor`, { method: 'PATCH', body: JSON.stringify({ valor }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      setEditingId(null);
+    }
+  });
 
-  const handleUndo = async (id: string) => {
-    setDespesas(prev => prev.map(d => d.id === id ? { ...d, isAnimating: true } : d));
-    setTimeout(async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/pendente`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) { fetchPagamentos(); fetchAtrasadas(); }
-      } catch (err) { console.error(err); setDespesas(prev => prev.map(d => d.id === id ? { ...d, isAnimating: false } : d)); }
-    }, 400);
-  };
+  const gerarFixas = useMutation({
+    mutationFn: () => apiFetch('/api/despesas/gerar-fixas', { method: 'POST', body: JSON.stringify({ month, year }) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['despesas'] })
+  });
 
-  const handleUpdateValor = async (id: string) => {
-    const valorNum = parseFloat(editingValue.replace(',', '.'));
-    if (isNaN(valorNum)) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/valor`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ valor: valorNum })
+  const handleToggleState = (id: string, isPago: boolean) => {
+    setAnimatingIds(prev => new Set(prev).add(id));
+    setTimeout(() => {
+      togglePagoMutation.mutate({ id, isPago }, {
+        onSettled: () => {
+          setAnimatingIds(prev => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        }
       });
-      if (response.ok) {
-        setEditingId(null);
-        fetchPagamentos();
-        fetchAtrasadas();
-      }
-    } catch (err) { console.error(err); }
+    }, 400);
+  };
+
+  const handlePagar = (id: string) => handleToggleState(id, false);
+  const handleUndo = (id: string) => handleToggleState(id, true);
+
+  const handleUpdateValor = (id: string) => {
+    const valorNum = parseFloat(editingValue.replace(',', '.'));
+    if (!isNaN(valorNum)) updateValor.mutate({ id, valor: valorNum });
   };
 
   const calculateDiff = (current: number, prev: number) => {
@@ -128,23 +109,10 @@ export default function Pagamentos() {
     return ((current - prev) / prev) * 100;
   };
 
-  const handleGerarFixas = async () => {
-    setGenerating(true);
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    try {
-      const response = await fetch(API_BASE_URL + '/api/despesas/gerar-fixas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ month, year })
-      });
-      if (response.ok) { fetchPagamentos(); }
-    } catch (err) { console.error(err); }
-    finally { setGenerating(false); }
-  };
+  const handleGerarFixas = () => gerarFixas.mutate();
 
-  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
-  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
 
   // Despesas atrasadas SOMENTE de meses anteriores ao mês visualizado
   const atrasadasMesesAnteriores = atrasadas.filter((d: any) => {
@@ -155,13 +123,28 @@ export default function Pagamentos() {
     );
   });
 
+  // Aplica filtros na lista de despesas do mês atual
+  const filteredDespesas = despesas.filter(d => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!d.descricao?.toLowerCase().includes(q) && !d.valor?.toString().includes(q)) return false;
+    }
+    if (filterCategoria && d.categoria !== filterCategoria) return false;
+    
+    const valor = Number(d.valor);
+    if (filterValorMin && valor < Number(filterValorMin)) return false;
+    if (filterValorMax && valor > Number(filterValorMax)) return false;
+    
+    return true;
+  });
+
   // Pendentes do mês atual ordenados por data de vencimento (crescente)
-  const pendentes = despesas
+  const pendentes = filteredDespesas
     .filter(d => !d.pago)
     .sort((a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
-  const pagas = despesas.filter(d => d.pago);
+  const pagas = filteredDespesas.filter(d => d.pago);
 
-  const totalCurr = despesas.reduce((a, c) => a + Number(c.valor), 0);
+  const totalCurr = filteredDespesas.reduce((a, c) => a + Number(c.valor), 0);
   const totalPrev = prevMonthDespesas.reduce((a, c) => a + Number(c.valor), 0);
   const diffTotal = calculateDiff(totalCurr, totalPrev);
 
@@ -229,15 +212,15 @@ export default function Pagamentos() {
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-center md:justify-end gap-3 md:gap-4 w-full md:w-auto">
           <div className="flex items-center justify-between w-full sm:w-auto bg-[#15151A] border border-white/5 rounded-2xl p-1 shadow-2xl">
-            <button onClick={prevMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={handlePrevMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
             <div className="px-3 md:px-4 text-center flex-1 sm:flex-none min-w-[100px] md:min-w-[120px]">
               <p className="text-xs md:text-sm font-black text-white capitalize">{monthName}</p>
             </div>
-            <button onClick={nextMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronRight className="w-5 h-5" /></button>
+            <button onClick={handleNextMonth} className="p-2 md:p-3 text-zinc-500 hover:text-white transition-colors"><ChevronRight className="w-5 h-5" /></button>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button onClick={() => setIsCalendarOpen(true)} className="flex items-center justify-center p-3.5 md:p-4 bg-white/5 text-white border border-white/10 rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-110 active:scale-90 shrink-0"><Calendar className="w-5 h-5" /></button>
-            <button onClick={handleGerarFixas} disabled={generating} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3.5 md:px-5 md:py-4 bg-[#a3ff12] text-black rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50">
+            <button onClick={handleGerarFixas} disabled={gerarFixas.isPending} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3.5 md:px-5 md:py-4 bg-[#a3ff12] text-black rounded-xl md:rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50">
               <Zap className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
               <span className="font-black text-[9px] md:text-[10px] uppercase tracking-widest whitespace-nowrap">Gerar Despesas Fixas</span>
             </button>
@@ -287,6 +270,46 @@ export default function Pagamentos() {
         <button onClick={() => setActiveTab('pagas')} className={`flex-1 md:flex-none px-6 md:px-8 py-3 md:py-3.5 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all ${activeTab === 'pagas' ? 'bg-[#a3ff12] text-black shadow-xl scale-[1.02] md:scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}>PAGAS</button>
       </div>
 
+      {/* FILTROS AVANÇADOS */}
+      <div className="mb-6 bg-[#15151A] p-4 rounded-2xl border border-white/5 flex flex-col lg:flex-row gap-4 relative z-20">
+        <div className="flex-1">
+          <input 
+            type="text" 
+            placeholder="Buscar por descrição ou valor..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <select 
+            value={filterCategoria} 
+            onChange={(e) => setFilterCategoria(e.target.value)}
+            className="w-full sm:w-auto bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
+          >
+            <option value="">Todas as Categorias</option>
+            {categorias.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+          </select>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input 
+              type="number" 
+              placeholder="Min (R$)" 
+              value={filterValorMin}
+              onChange={(e) => setFilterValorMin(e.target.value)}
+              className="w-full sm:w-24 bg-black/40 border border-white/10 rounded-xl px-3 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+            />
+            <span className="text-zinc-500 font-bold">-</span>
+            <input 
+              type="number" 
+              placeholder="Max (R$)" 
+              value={filterValorMax}
+              onChange={(e) => setFilterValorMax(e.target.value)}
+              className="w-full sm:w-24 bg-black/40 border border-white/10 rounded-xl px-3 py-3 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* List */}
       <div className="space-y-4">
         {loading ? (
@@ -299,7 +322,7 @@ export default function Pagamentos() {
             const shouldShowParcela = conta.parcela_atual && conta.numero_parcelas > 1;
 
             return (
-              <div key={conta.id} className={`p-5 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border transition-all duration-500 ${conta.isAnimating ? 'opacity-0 translate-x-10 scale-95' : 'opacity-100'} ${conta.pago ? 'bg-white/[0.02] border-white/5' : 'bg-[#15151A] border-white/10 shadow-2xl hover:border-[#a3ff12]/30'}`}>
+              <div key={conta.id} className={`p-5 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border transition-all duration-500 ${animatingIds.has(conta.id) ? 'opacity-0 translate-x-10 scale-95' : 'opacity-100'} ${conta.pago ? 'bg-white/[0.02] border-white/5' : 'bg-[#15151A] border-white/10 shadow-2xl hover:border-[#a3ff12]/30'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 md:gap-8">
                   <div className="flex items-center gap-4 md:gap-6">
                     <div className={`w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 ${conta.pago ? 'bg-[#a3ff12]/10 text-[#a3ff12]' : 'bg-[#FF4D4D]/10 text-[#FF4D4D]'}`}>

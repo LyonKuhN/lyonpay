@@ -121,10 +121,7 @@ export function NeuralVortexBackground() {
     const uPointerPosition = gl.getUniformLocation(program, 'u_pointer_position');
     const uScrollProgress = gl.getUniformLocation(program, 'u_scroll_progress');
 
-    let lastWidth = window.innerWidth;
     const resizeCanvas = () => {
-      if (window.innerWidth === lastWidth && canvasEl.width !== 0) return;
-      lastWidth = window.innerWidth;
       const devicePixelRatio = Math.min(window.devicePixelRatio, 2);
       canvasEl.width = window.innerWidth * devicePixelRatio;
       canvasEl.height = window.innerHeight * devicePixelRatio;

@@ -12,6 +12,7 @@ import Admin from './pages/Admin';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 
 function FloatingNav() {
   const { user, logout } = useAuth();
@@ -46,25 +47,25 @@ function FloatingNav() {
   }, []);
 
   return (
-    <div className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[95%] md:w-auto md:min-w-[500px] max-w-6xl">
-      <nav className="glass bg-[#15151A]/80 backdrop-blur-xl px-4 md:px-6 py-2 rounded-full border border-white/5 flex items-center justify-between shadow-2xl relative">
+    <div className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-[380px] md:w-auto md:max-w-6xl">
+      <nav className="glass bg-[#15151A]/80 backdrop-blur-xl px-2 md:px-6 py-1.5 md:py-2 rounded-full border border-white/5 flex items-center justify-between shadow-2xl relative">
         
         {/* Logo */}
-        <div className="pr-3 md:pr-4 flex items-center border-r border-white/5 mr-2 md:mr-4 shrink-0">
+        <div className="pr-2 md:pr-4 flex items-center border-r border-white/5 mr-1 md:mr-4 shrink-0">
           <Link to="/" className="flex items-center cursor-pointer">
-            <img src="/logo.png" alt="Logo" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-lg" />
+            <img src={theme === 'light' ? '/logo_black.png' : '/logo_white.png'} alt="Logo Lyonk" className="w-8 h-8 md:w-9 md:h-9 object-contain drop-shadow-lg" />
           </Link>
         </div>
 
         {/* Main Navigation */}
-        <div className="flex-1 flex items-center justify-center gap-1 md:gap-2 px-1">
+        <div className="flex-1 flex items-center justify-center md:justify-center gap-2 md:gap-2 px-1 py-1 overflow-x-auto no-scrollbar">
           {mainLinks.map((link) => {
             const isActive = location.pathname === link.path;
             return (
               <Link
                 key={link.name}
                 to={link.path}
-                className={`px-3 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 ${
+                className={`p-2.5 md:px-5 md:py-2.5 rounded-full text-sm font-semibold transition-all duration-300 flex items-center gap-2.5 whitespace-nowrap shrink-0 ${
                   isActive
                     ? 'bg-[#a3ff12]/10 text-[#a3ff12] shadow-lg'
                     : 'text-zinc-500 hover:text-white hover:bg-white/5'
@@ -78,7 +79,7 @@ function FloatingNav() {
         </div>
 
         {/* Profile / Extra Menu */}
-        <div className="pl-2 md:pl-4 ml-2 md:ml-4 border-l border-white/5 flex items-center gap-1 shrink-0" ref={menuRef}>
+        <div className="pl-1 md:pl-4 ml-1 md:ml-4 border-l border-white/5 flex items-center gap-1 shrink-0" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all ${
@@ -168,8 +169,26 @@ function AppLayout() {
   const { theme } = useTheme();
   const isLanding = location.pathname === '/';
 
+  // Forçar Landing Page a ser sempre Dark Mode na raiz do HTML
+  useEffect(() => {
+    if (isLanding) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      if (theme === 'light') {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      }
+    }
+  }, [isLanding, theme]);
+
+  const backgroundClass = isLanding || theme === 'dark' ? 'bg-[#09090B] text-white' : 'bg-gray-50 text-gray-900';
+
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#09090B] text-white' : 'bg-gray-50 text-gray-900'} selection:bg-[#a3ff12] selection:text-black font-sans relative overflow-x-hidden transition-colors duration-300`}>
+    <div className={`min-h-screen ${backgroundClass} selection:bg-[#a3ff12] selection:text-black font-sans relative overflow-x-hidden transition-colors duration-300`}>
 
       {!isLanding && theme === 'dark' && (
         <>
@@ -193,6 +212,16 @@ function AppLayout() {
           <Route path="/admin" element={<PrivateRoute>{user?.role === 'admin' ? <Admin /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
         </Routes>
       </main>
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          style: {
+            background: theme === 'dark' ? '#15151A' : '#ffffff',
+            color: theme === 'dark' ? '#ffffff' : '#000000',
+            border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+          },
+        }}
+      />
     </div>
   );
 }

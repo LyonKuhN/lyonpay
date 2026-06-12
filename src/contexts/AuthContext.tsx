@@ -28,8 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('lyonpay_token');
-    const savedUser = localStorage.getItem('lyonpay_user');
+    const savedToken = localStorage.getItem('lyonk_token');
+    const savedUser = localStorage.getItem('lyonk_user');
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
@@ -41,20 +41,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
-    localStorage.setItem('lyonpay_token', newToken);
-    localStorage.setItem('lyonpay_user', JSON.stringify(newUser));
+    localStorage.setItem('lyonk_token', newToken);
+    localStorage.setItem('lyonk_user', JSON.stringify(newUser));
   };
 
   const updateUser = (newUser: User) => {
     setUser(newUser);
-    localStorage.setItem('lyonpay_user', JSON.stringify(newUser));
+    localStorage.setItem('lyonk_user', JSON.stringify(newUser));
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('lyonpay_token');
-    localStorage.removeItem('lyonpay_user');
+    localStorage.removeItem('lyonk_token');
+    localStorage.removeItem('lyonk_user');
   };
 
   return (

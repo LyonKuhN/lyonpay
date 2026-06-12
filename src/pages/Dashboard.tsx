@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, TrendingUp, TrendingDown, Clock, Loader2, Search, X, Calendar, ArrowRight, Tag, AlertCircle, CheckCircle2, BarChart3, Zap } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { apiFetch } from '../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -13,79 +16,106 @@ const formatDate = (dateStr: string) => {
 export default function Dashboard() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+
+  const { data: receitasRaw = [], isLoading: loadRec } = useQuery({ queryKey: ['receitas'], queryFn: () => apiFetch('/api/receitas'), enabled: !!token });
+  const { data: despesasRaw = [], isLoading: loadDes } = useQuery({ queryKey: ['despesas', year, month], queryFn: () => apiFetch(`/api/despesas?month=${month}&year=${year}`), enabled: !!token });
+  const { data: atrasadasRaw = [], isLoading: loadAtr } = useQuery({ queryKey: ['despesas', 'atrasadas'], queryFn: () => apiFetch('/api/despesas/atrasadas'), enabled: !!token });
+  const { data: lembretesRaw = [], isLoading: loadLem } = useQuery({ queryKey: ['lembretes'], queryFn: () => apiFetch('/api/lembretes'), enabled: !!token });
+  const { data: evolucao = { receitas: [], despesas: [] }, isLoading: loadEvo } = useQuery({ queryKey: ['dashboard', 'evolucao'], queryFn: () => apiFetch('/api/dashboard/evolucao'), enabled: !!token });
+
+  const loading = loadRec || loadDes || loadAtr || loadLem || loadEvo;
+
+  const atrasadas = Array.isArray(atrasadasRaw) ? atrasadasRaw : [];
+  const lembretes = Array.isArray(lembretesRaw) ? lembretesRaw.filter(r => !r.concluido).slice(0, 3) : [];
+
+  const data = (() => {
+    const receitas = Array.isArray(receitasRaw) ? receitasRaw : [];
+    const despesas = Array.isArray(despesasRaw) ? despesasRaw : [];
+
+    const totalRec = receitas.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0);
+    const totalDes = despesas.filter((d: any) => d.pago).reduce((acc: number, curr: any) => acc + Number(curr.valor), 0);
+    const totalPend = despesas.filter((d: any) => !d.pago).reduce((acc: number, curr: any) => acc + Number(curr.valor), 0);
+
+    const catMap: Record<string, number> = {};
+    despesas.filter((d: any) => d.pago).forEach((d: any) => {
+      const cat = d.categoria || 'Outros';
+      catMap[cat] = (catMap[cat] || 0) + Number(d.valor);
+    });
+    const categorias = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const chartMap: Record<string, any> = {};
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayStr = i.toString().padStart(2, '0');
+      chartMap[dayStr] = { name: dayStr, Entradas: 0, Saidas: 0 };
+    }
+
+    receitas.forEach((r: any) => {
+      const d = r.data_recebimento ? new Date(r.data_recebimento) : new Date();
+      if (d.getMonth() + 1 === month && d.getFullYear() === year) {
+        const dayStr = d.getDate().toString().padStart(2, '0');
+        if (chartMap[dayStr]) chartMap[dayStr].Entradas += Number(r.valor);
+      }
+    });
+
+    despesas.filter((d:any) => d.pago).forEach((d: any) => {
+      const dt = d.data_vencimento ? new Date(d.data_vencimento) : new Date();
+      if (dt.getMonth() + 1 === month && dt.getFullYear() === year) {
+        const dayStr = dt.getDate().toString().padStart(2, '0');
+        if (chartMap[dayStr]) chartMap[dayStr].Saidas += Number(d.valor);
+      }
+    });
+
+    return {
+      receitas: receitas.slice(0, 5),
+      despesas: despesas.filter((d: any) => !d.pago).sort((a: any, b: any) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime()).slice(0, 5),
+      totalReceitas: totalRec,
+      totalDespesas: totalDes,
+      totalPendente: totalPend,
+      saldo: totalRec - totalDes,
+      categorias,
+      chartData: Object.values(chartMap),
+      pieData: categorias.map(([name, value]) => ({ name, value }))
+    };
+  })();
+
+  const evolucaoData = (() => {
+    const map = new Map<string, { name: string, Receitas: number, Despesas: number }>();
+    const rec = evolucao.receitas || [];
+    const des = evolucao.despesas || [];
+    
+    rec.forEach((r: any) => {
+      const label = `${String(r.mes).padStart(2, '0')}/${r.ano}`;
+      if (!map.has(label)) map.set(label, { name: label, Receitas: 0, Despesas: 0 });
+      map.get(label)!.Receitas += Number(r.total);
+    });
+    
+    des.forEach((d: any) => {
+      const label = `${String(d.mes).padStart(2, '0')}/${d.ano}`;
+      if (!map.has(label)) map.set(label, { name: label, Receitas: 0, Despesas: 0 });
+      map.get(label)!.Despesas += Number(d.total);
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      const [m1, a1] = a.name.split('/');
+      const [m2, a2] = b.name.split('/');
+      return new Date(Number(a1), Number(m1) - 1).getTime() - new Date(Number(a2), Number(m2) - 1).getTime();
+    });
+  })();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [atrasadas, setAtrasadas] = useState<any[]>([]);
-  const [data, setData] = useState({
-    receitas: [] as any[],
-    despesas: [] as any[],
-    saldo: 0,
-    totalReceitas: 0,
-    totalDespesas: 0,
-    totalPendente: 0,
-    categorias: [] as any[],
-  });
-  const [lembretes, setLembretes] = useState<any[]>([]);
-
-  const fetchData = async () => {
-    try {
-      const now = new Date();
-      const month = now.getMonth() + 1;
-      const year = now.getFullYear();
-
-      const [resRec, resDes, resAtrasadas, resRem] = await Promise.all([
-        fetch(API_BASE_URL + '/api/receitas', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/api/despesas?month=${month}&year=${year}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(API_BASE_URL + '/api/despesas/atrasadas', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(API_BASE_URL + '/api/lembretes', { headers: { 'Authorization': `Bearer ${token}` } }),
-      ]);
-      const receitas = await resRec.json();
-      const despesas = await resDes.json();
-      const atrasadasData = await resAtrasadas.json();
-      const reminders = await resRem.json();
-
-      const totalRec = Array.isArray(receitas) ? receitas.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) : 0;
-      const totalDes = Array.isArray(despesas) ? despesas.filter((d: any) => d.pago).reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) : 0;
-      const totalPend = Array.isArray(despesas) ? despesas.filter((d: any) => !d.pago).reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) : 0;
-
-      // Top categorias de despesas
-      const catMap: Record<string, number> = {};
-      if (Array.isArray(despesas)) {
-        despesas.filter((d: any) => d.pago).forEach((d: any) => {
-          const cat = d.categoria || 'Outros';
-          catMap[cat] = (catMap[cat] || 0) + Number(d.valor);
-        });
-      }
-      const categorias = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
-
-      setAtrasadas(Array.isArray(atrasadasData) ? atrasadasData : []);
-      setLembretes(Array.isArray(reminders) ? reminders.filter(r => !r.concluido).slice(0, 3) : []);
-      setData({
-        receitas: Array.isArray(receitas) ? receitas.slice(0, 5) : [],
-        despesas: Array.isArray(despesas) ? despesas.filter((d: any) => !d.pago).sort((a: any, b: any) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime()).slice(0, 5) : [],
-        totalReceitas: totalRec,
-        totalDespesas: totalDes,
-        totalPendente: totalPend,
-        saldo: totalRec - totalDes,
-        categorias,
-      });
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => {
-    if (token) fetchData();
-  }, [token]);
 
   useEffect(() => {
     const search = async () => {
       if (searchQuery.length < 2) { setSearchResults([]); setIsSearching(false); return; }
       setIsSearching(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/search?q=${searchQuery}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        const results = await response.json();
+        const results = await apiFetch(`/api/search?q=${searchQuery}`);
         setSearchResults(results);
       } catch (err) { console.error(err); }
       finally { setIsSearching(false); }
@@ -96,8 +126,28 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-[#a3ff12]" size={40} />
+      <div className="max-w-7xl mx-auto space-y-8 pb-24 px-4 md:px-6 mt-6 md:mt-10">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-12 h-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="col-span-2 h-40 rounded-[2rem]" />
+          <Skeleton className="h-40 rounded-[1.5rem]" />
+          <Skeleton className="h-40 rounded-[1.5rem]" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-64 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -222,6 +272,132 @@ export default function Dashboard() {
             <p className="text-zinc-500 font-black text-[9px] uppercase tracking-widest mb-1">Saídas Pagas</p>
             <p className="text-xl md:text-2xl font-black text-[#FF4D4D] leading-tight">R$ {data.totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
           </div>
+        </div>
+      </div>
+
+      {/* Gráficos Recharts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Gráfico de Evolução ao Longo dos Meses */}
+        <div className="col-span-1 lg:col-span-3 p-6 rounded-[2rem] bg-[#15151A] border border-white/5 shadow-2xl">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-black text-white">Evolução ao Longo dos Meses</h3>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Últimos 6 meses</p>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-[#a3ff12]" /><span className="text-[10px] font-bold text-zinc-400 uppercase">Receitas</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-[#FF4D4D]" /><span className="text-[10px] font-bold text-zinc-400 uppercase">Despesas</span></div>
+            </div>
+          </div>
+          <div className="w-full h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={evolucaoData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="name" stroke="#52525B" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#52525B" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value >= 1000 ? (value/1000).toFixed(1)+'k' : value}`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#15151A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', color: '#fff' }}
+                  itemStyle={{ fontWeight: 'bold' }}
+                />
+                <Line type="monotone" dataKey="Receitas" stroke="#a3ff12" strokeWidth={3} dot={{ r: 4, fill: '#15151A', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="Despesas" stroke="#FF4D4D" strokeWidth={3} dot={{ r: 4, fill: '#15151A', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="col-span-1 lg:col-span-2 p-6 rounded-[2rem] bg-[#15151A] border border-white/5 shadow-2xl">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-black text-white">Fluxo de Caixa</h3>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Evolução Diária ({monthName})</p>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#a3ff12]" /><span className="text-[10px] font-bold text-zinc-400 uppercase">Entradas</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#FF4D4D]" /><span className="text-[10px] font-bold text-zinc-400 uppercase">Saídas</span></div>
+            </div>
+          </div>
+          <div className="w-full h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a3ff12" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#a3ff12" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorSaidas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#FF4D4D" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#FF4D4D" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="name" stroke="#52525B" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#52525B" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value >= 1000 ? (value/1000).toFixed(1)+'k' : value}`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#15151A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', color: '#fff' }}
+                  itemStyle={{ fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="Entradas" stroke="#a3ff12" strokeWidth={3} fillOpacity={1} fill="url(#colorEntradas)" />
+                <Area type="monotone" dataKey="Saidas" stroke="#FF4D4D" strokeWidth={3} fillOpacity={1} fill="url(#colorSaidas)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="col-span-1 p-6 rounded-[2rem] bg-[#15151A] border border-white/5 shadow-2xl flex flex-col">
+          <div className="mb-4">
+            <h3 className="text-xl font-black text-white">Despesas por Categoria</h3>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Distribuição do Mês</p>
+          </div>
+          <div className="flex-1 w-full min-h-[200px] flex items-center justify-center relative">
+            {data.pieData.length === 0 ? (
+              <p className="text-zinc-600 text-xs font-bold uppercase">Sem despesas pagas</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {data.pieData.map((_, index) => {
+                      const colors = ['#a3ff12', '#635BFF', '#FFD700', '#FF4D4D', '#06B6D4'];
+                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                    })}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#15151A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', color: '#fff' }}
+                    itemStyle={{ fontWeight: 'bold' }}
+                    formatter={(value: any) => `R$ ${Number(value).toLocaleString('pt-BR')}`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+            {data.pieData.length > 0 && (
+               <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                 <span className="text-[10px] font-black text-zinc-500 uppercase">Total</span>
+                 <span className="text-lg font-black text-white">R${data.totalDespesas >= 1000 ? (data.totalDespesas/1000).toFixed(1)+'k' : data.totalDespesas}</span>
+               </div>
+            )}
+          </div>
+          {data.pieData.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {data.pieData.slice(0,4).map((entry, index) => {
+                const colors = ['#a3ff12', '#635BFF', '#FFD700', '#FF4D4D'];
+                return (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[index] }} />
+                    <span className="text-[10px] font-bold text-zinc-400 truncate">{entry.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

@@ -120,8 +120,9 @@ export default function Landing() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#333333] bg-[#0A0A0A]/60 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between py-4">
-          <div className="flex items-center">
-            <span className="text-xl font-bold text-[#D7FF67]">LyonPay</span>
+          <div className="flex items-center gap-2">
+            <img src="/logo_white.png" alt="Lyonk Logo" className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-lg" />
+            <span className="text-xl font-bold text-[#D7FF67]">Lyonk</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#888888]">
             <a href="#recursos" className="hover:text-[#FCFCFC] transition-colors">Recursos</a>
@@ -535,7 +536,7 @@ export default function Landing() {
             Pronto para assumir o<br />
             <span className="text-[#D7FF67]">controle do seu dinheiro?</span>
           </h2>
-          <p className="text-[#888888] text-lg mb-10">Junte-se a milhares de pessoas que já transformaram suas finanças com o LyonPay.</p>
+          <p className="text-[#888888] text-lg mb-10">Junte-se a milhares de pessoas que já transformaram suas finanças com o Lyonk.</p>
           <button
             onClick={() => setIsAuthModalOpen('register')}
             className="px-8 py-3 bg-[#D7FF67] text-[#0A0A0A] font-bold rounded-full hover:opacity-90 transition-all inline-flex items-center gap-2"
@@ -549,9 +550,10 @@ export default function Landing() {
       <footer className="py-12 border-t border-[#333333] bg-[#0A0A0A]/80 backdrop-blur-md relative z-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[#D7FF67]">LyonPay</span>
+            <img src="/logo_white.png" alt="Lyonk Logo" className="w-6 h-6 object-contain" />
+            <span className="font-bold text-[#D7FF67]">Lyonk</span>
           </div>
-          <p className="text-[#888888] text-sm">© 2026 LyonPay. Todos os direitos reservados.</p>
+          <p className="text-[#888888] text-sm">© 2026 Lyonk. Todos os direitos reservados.</p>
           <div className="flex gap-6 text-[#888888] text-sm">
             <a href="#" className="hover:text-[#FCFCFC] transition-colors">Privacidade</a>
             <a href="#" className="hover:text-[#FCFCFC] transition-colors">Termos</a>

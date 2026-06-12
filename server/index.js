@@ -68,6 +68,9 @@ app.use('/api/', limiter);
 app.use(express.json());
 
 app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
   next();
 });
@@ -83,13 +86,13 @@ const sendConfirmationEmail = async (email, name, token) => {
   const htmlContent = `
     <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px;">
       <h1 style="color: #a3ff12; font-size: 24px;">Olá, ${name}!</h1>
-      <p style="font-size: 16px; color: #a1a1aa;">Para começar a usar o Lyonpay, precisamos que você confirme seu e-mail.</p>
+      <p style="font-size: 16px; color: #a1a1aa;">Para começar a usar o Lyonk, precisamos que você confirme seu e-mail.</p>
       <div style="text-align: center;">
         <a href="${verifyUrl}" style="display: inline-block; background-color: #a3ff12; color: black; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-decoration: none; margin: 20px 0;">Confirmar E-mail</a>
       </div>
       <p style="font-size: 14px; color: #71717a;">Ou copie o link: ${verifyUrl}</p>
       <hr style="border: 0; border-top: 1px solid #27272a; margin: 30px 0;" />
-      <p style="font-weight: bold; color: #FFD700;">Lyonpay - Controle seu futuro.</p>
+      <p style="font-weight: bold; color: #FFD700;">Lyonk - Controle seu futuro.</p>
     </div>
   `;
 
@@ -97,9 +100,9 @@ const sendConfirmationEmail = async (email, name, token) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Lyonpay <onboarding@resend.dev>',
+      from: process.env.EMAIL_FROM || 'Lyonk <onboarding@resend.dev>',
       to: email,
-      subject: "Confirme seu e-mail no Lyonpay! 🛡️",
+      subject: "Confirme seu e-mail no Lyonk! 🛡️",
       html: htmlContent,
     });
     
@@ -629,6 +632,24 @@ app.delete('/api/lembretes/:id', authenticateToken, async (req, res) => {
 // --- STRIPE & SUBSCRIPTIONS ---
 app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   try {
+    const { cupom_codigo } = req.body || {};
+    let stripeCouponId = undefined;
+
+    if (cupom_codigo) {
+      const cRes = await pool.query('SELECT * FROM public.cupons WHERE codigo = $1', [cupom_codigo]);
+      if (cRes.rows.length > 0) {
+        const cupom = cRes.rows[0];
+        if (parseFloat(cupom.desconto_percentual) > 0 && parseFloat(cupom.desconto_percentual) < 100) {
+          const stripeCoupon = await stripe.coupons.create({
+            percent_off: parseFloat(cupom.desconto_percentual),
+            duration: 'forever',
+            name: cupom_codigo
+          });
+          stripeCouponId = stripeCoupon.id;
+        }
+      }
+    }
+
     const config = await pool.query("SELECT value FROM public.config WHERE key = 'monthly_fee'");
     const fee = parseFloat(config.rows[0]?.value || '17.90');
 
@@ -636,12 +657,12 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
       ? `https://${process.env.SERVICE_FQDN_LYONPAY_WEB}` 
       : 'http://localhost:5173';
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig = {
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
           currency: 'brl',
-          product_data: { name: 'Lyonpay Pro', description: 'Acesso total ao sistema de gestão financeira' },
+          product_data: { name: 'Lyonk Pro', description: 'Acesso total ao sistema de gestão financeira' },
           unit_amount: Math.round(fee * 100),
           recurring: { interval: 'month' }
         },
@@ -652,7 +673,13 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
       cancel_url: `${frontendUrl}/config?canceled=true`,
       customer_email: req.user.email,
       metadata: { user_id: req.user.id }
-    });
+    };
+
+    if (stripeCouponId) {
+      sessionConfig.discounts = [{ coupon: stripeCouponId }];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
     res.json({ url: session.url });
   } catch (err) { 
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
@@ -783,7 +810,7 @@ const checkReminders = async () => {
       const htmlContent = `
         <div style="font-family: sans-serif; background-color: #09090B; color: white; padding: 40px; border-radius: 20px; border: 1px solid #27272a;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <span style="background-color: #FFD700; color: black; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase;">Lembrete Lyonpay</span>
+            <span style="background-color: #FFD700; color: black; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase;">Lembrete Lyonk</span>
           </div>
           <h1 style="color: #a3ff12; font-size: 24px; margin-bottom: 10px;">Olá, ${rem.display_name || 'Usuário'}!</h1>
           <p style="font-size: 18px; color: white; font-weight: bold; margin-bottom: 5px;">${rem.titulo}</p>
@@ -799,13 +826,13 @@ const checkReminders = async () => {
           </div>
           
           <hr style="border: 0; border-top: 1px solid #27272a; margin: 30px 0;" />
-          <p style="font-weight: bold; color: #FFD700; text-align: center;">Lyonpay - Controle seu futuro.</p>
+          <p style="font-weight: bold; color: #FFD700; text-align: center;">Lyonk - Controle seu futuro.</p>
         </div>
       `;
 
       try {
         await resend.emails.send({
-          from: process.env.EMAIL_FROM || 'Lyonpay <alertas@resend.dev>',
+          from: process.env.EMAIL_FROM || 'Lyonk <alertas@resend.dev>',
           to: rem.user_email,
           subject: `🔔 Lembrete: ${rem.titulo}`,
           html: htmlContent,
@@ -828,4 +855,87 @@ setInterval(checkReminders, 5 * 60 * 1000);
 setTimeout(checkReminders, 10000);
 
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => console.log(`Servidor Lyonpay rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor Lyonk rodando na porta ${PORT}`));
+
+
+// --- DASHBOARD ROUTES ---
+app.get('/api/dashboard/evolucao', authenticateToken, async (req, res) => {
+  try {
+    const receitas = await pool.query(`SELECT EXTRACT(MONTH FROM data_recebimento) as mes, EXTRACT(YEAR FROM data_recebimento) as ano, SUM(valor) as total FROM public.receitas WHERE user_id = $1 AND data_recebimento >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months') GROUP BY ano, mes ORDER BY ano, mes`, [req.user.id]);
+    const despesas = await pool.query(`SELECT EXTRACT(MONTH FROM data_vencimento) as mes, EXTRACT(YEAR FROM data_vencimento) as ano, SUM(valor) as total FROM public.despesas WHERE user_id = $1 AND is_modelo = false AND data_vencimento >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months') GROUP BY ano, mes ORDER BY ano, mes`, [req.user.id]);
+    res.json({ receitas: receitas.rows, despesas: despesas.rows });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- CUPONS ROUTES ---
+app.get('/api/admin/cupons', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM public.cupons ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/cupons', authenticateToken, isAdmin, async (req, res) => {
+  const { codigo, desconto_percentual, max_usos } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO public.cupons (codigo, desconto_percentual, max_usos) VALUES ($1, $2, $3) RETURNING *',
+      [codigo.toUpperCase(), desconto_percentual, max_usos ? parseInt(max_usos) : null]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Código de cupom já existe' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/cupons/:id', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM public.cupons WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Cupom removido' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/config/aplicar-cupom', authenticateToken, async (req, res) => {
+  const { codigo } = req.body;
+  try {
+    const cupomRes = await pool.query('SELECT * FROM public.cupons WHERE codigo = $1', [codigo.toUpperCase()]);
+    if (cupomRes.rows.length === 0) return res.status(404).json({ error: 'Cupom inválido ou não encontrado' });
+    const cupom = cupomRes.rows[0];
+
+    if (cupom.max_usos !== null && cupom.usos_atuais >= cupom.max_usos) {
+      return res.status(400).json({ error: 'Cupom esgotado' });
+    }
+
+    const usadoRes = await pool.query('SELECT * FROM public.cupons_usados WHERE user_id = $1 AND cupom_id = $2', [req.user.id, cupom.id]);
+    if (usadoRes.rows.length > 0) return res.status(400).json({ error: 'Você já utilizou este cupom' });
+
+    if (parseFloat(cupom.desconto_percentual) === 100) {
+      await pool.query('UPDATE public.cupons SET usos_atuais = usos_atuais + 1 WHERE id = $1', [cupom.id]);
+      await pool.query('INSERT INTO public.cupons_usados (user_id, cupom_id) VALUES ($1, $2)', [req.user.id, cupom.id]);
+      
+      const emailRes = await pool.query('SELECT email FROM auth.users WHERE id = $1', [req.user.id]);
+      const email = emailRes.rows[0].email;
+      
+      await pool.query(
+        `INSERT INTO public.subscribers (user_id, email, subscribed, subscription_tier, expires_at) 
+         VALUES ($1, $2, true, 'cupom_100', now() + interval '100 years') 
+         ON CONFLICT (email) DO UPDATE SET subscribed = true, subscription_tier = 'cupom_100', expires_at = now() + interval '100 years'`,
+        [req.user.id, email]
+      );
+      return res.json({ message: 'Acesso liberado! Cupom aplicado com sucesso.', tipo: '100' });
+    } else {
+      return res.json({ message: 'Cupom validado! O desconto será aplicado no checkout.', tipo: 'parcial', desconto: cupom.desconto_percentual, codigo: cupom.codigo });
+    }
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});

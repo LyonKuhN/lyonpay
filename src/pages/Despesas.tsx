@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Tag, Loader2, Bookmark, PieChart, Wallet, Layers, ChevronDown, Calculator, Edit2, Save, X, Search, Filter, Check } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Tag, Bookmark, PieChart, Wallet, Layers, ChevronDown, Edit2, Save, X, Search, Filter, Check, Calculator } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { apiFetch } from '../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '../components/ui/Skeleton';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -14,10 +18,7 @@ const LC = "block text-[10px] font-black text-zinc-500 uppercase tracking-widest
 
 export default function Despesas() {
   const { token } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [despesas, setDespesas] = useState<any[]>([]);
-  const [modelos, setModelos] = useState<any[]>([]);
-  const [categorias, setCategorias] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'todas' | 'modelos'>('todas');
@@ -27,13 +28,17 @@ export default function Despesas() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
+  const [filterValorMin, setFilterValorMin] = useState('');
+  const [filterValorMax, setFilterValorMax] = useState('');
+  const [filterDataInicio, setFilterDataInicio] = useState('');
+  const [filterDataFim, setFilterDataFim] = useState('');
 
   // Estado para controlar se o valor inserido é o total ou da parcela
   const [parcelInputMode, setParcelInputMode] = useState<'parcela' | 'total'>('parcela');
-  // Valor bruto digitado no campo (para manter o que o usuário escreveu)
   const [rawAmount, setRawAmount] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [editItem, setEditItem] = useState<any>(null);
 
   const emptyForm = {
     descricao: '', valor: '',
@@ -43,6 +48,7 @@ export default function Despesas() {
     valor_total: '',
     observacoes: '',
     categoria: 'Outros',
+    usa_media: false,
   };
   const [form, setForm] = useState(emptyForm);
   const [newCat, setNewCat] = useState({ nome: '', cor: '#a3ff12' });
@@ -72,86 +78,92 @@ export default function Despesas() {
     }
   }, [rawAmount, form.numero_parcelas, parcelInputMode, form.tipo]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const h = { Authorization: `Bearer ${token}` };
-      const [r1, r2, r3] = await Promise.all([
-        fetch(API_BASE_URL + '/api/despesas', { headers: h }),
-        fetch(API_BASE_URL + '/api/despesas/modelos', { headers: h }),
-        fetch(API_BASE_URL + '/api/categorias', { headers: h }),
-      ]);
-      setDespesas(await r1.json());
-      setModelos(await r2.json());
-      const cats = await r3.json();
-      setCategorias(cats.filter((c: any) => c.tipo === 'despesa'));
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
+  const { data: despesasRaw = [], isLoading: load1 } = useQuery({ queryKey: ['despesas'], queryFn: () => apiFetch('/api/despesas'), enabled: !!token });
+  const { data: modelosRaw = [], isLoading: load2 } = useQuery({ queryKey: ['despesas', 'modelos'], queryFn: () => apiFetch('/api/despesas/modelos'), enabled: !!token });
+  const { data: catAll = [], isLoading: load3 } = useQuery({ queryKey: ['categorias'], queryFn: () => apiFetch('/api/categorias'), enabled: !!token });
+  
+  const despesas = Array.isArray(despesasRaw) ? despesasRaw : [];
+  const modelos = Array.isArray(modelosRaw) ? modelosRaw : [];
+  const categorias = Array.isArray(catAll) ? catAll.filter((c: any) => c.tipo === 'despesa') : [];
+  const initialLoading = load1 || load2 || load3;
+  const loading = initialLoading;
 
-  useEffect(() => { if (token) fetchData(); }, [token]);
+  const createDespesa = useMutation({
+    mutationFn: (data: any) => apiFetch('/api/despesas', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      setIsModalOpen(false);
+      setForm(emptyForm);
+      setRawAmount('');
+      setEditItem(null);
+    }
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const updateDespesa = useMutation({
+    mutationFn: (data: any) => apiFetch(`/api/despesas/${editItem.id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      setIsModalOpen(false);
+      setForm(emptyForm);
+      setRawAmount('');
+      setEditItem(null);
+    }
+  });
+
+  const createCategoria = useMutation({
+    mutationFn: (data: any) => apiFetch('/api/categorias', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+      setIsCatModalOpen(false);
+      setNewCat({ nome: '', cor: '#a3ff12' });
+    }
+  });
+
+  const deleteDespesa = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/despesas/${id}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['despesas'] })
+  });
+
+  const updateValor = useMutation({
+    mutationFn: ({ id, valor }: { id: string; valor: number }) => apiFetch(`/api/despesas/${id}/valor`, { method: 'PATCH', body: JSON.stringify({ valor }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      setEditingId(null);
+    }
+  });
+
+  const togglePago = useMutation({
+    mutationFn: ({ id, isPago }: { id: string; isPago: boolean }) => apiFetch(`/api/despesas/${id}/${isPago ? 'pendente' : 'pagar'}`, { method: 'PATCH' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['despesas'] })
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const res = await fetch(API_BASE_URL + '/api/despesas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
-      });
-      if (res.ok) { 
-        setIsModalOpen(false); 
-        setForm(emptyForm); 
-        setRawAmount('');
-        fetchData(); 
-      }
-    } catch (err) { console.error(err); }
+    if (editItem) {
+      updateDespesa.mutate(form);
+    } else {
+      createDespesa.mutate(form);
+    }
   };
 
-  const handleAddCat = async () => {
+  const handleAddCat = () => {
     if (!newCat.nome.trim()) return;
-    try {
-      const res = await fetch(API_BASE_URL + '/api/categorias', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...newCat, tipo: 'despesa', icone: 'Tag' }),
-      });
-      if (res.ok) { setIsCatModalOpen(false); setNewCat({ nome: '', cor: '#a3ff12' }); fetchData(); }
-    } catch (err) { console.error(err); }
+    createCategoria.mutate({ ...newCat, tipo: 'despesa', icone: 'Tag' });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Excluir esta despesa?')) return;
-    await fetch(`${API_BASE_URL}/api/despesas/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    fetchData();
+    deleteDespesa.mutate(id);
   };
 
-  const handleUpdateValor = async (id: string) => {
+  const handleUpdateValor = (id: string) => {
     const valorNum = parseFloat(editingValue.replace(',', '.'));
     if (isNaN(valorNum)) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/valor`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ valor: valorNum })
-      });
-      if (response.ok) {
-        setEditingId(null);
-        fetchData();
-      }
-    } catch (err) { console.error(err); }
+    updateValor.mutate({ id, valor: valorNum });
   };
 
-  const handleTogglePago = async (id: string, isPago: boolean) => {
-    try {
-      const endpoint = isPago ? 'pendente' : 'pagar';
-      const response = await fetch(`${API_BASE_URL}/api/despesas/${id}/${endpoint}`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) fetchData();
-    } catch (err) { console.error(err); }
+  const handleTogglePago = (id: string, isPago: boolean) => {
+    togglePago.mutate({ id, isPago });
   };
 
   const toggleGroup = (key: string) => {
@@ -200,6 +212,22 @@ export default function Despesas() {
       return t === filterTipo || (filterTipo === 'fixa' && t === 'fixo') || (filterTipo === 'parcelada' && t === 'parcelado');
     });
   }
+  if (filterValorMin) {
+    baseList = baseList.filter(d => Number(d.valor) >= Number(filterValorMin));
+  }
+  if (filterValorMax) {
+    baseList = baseList.filter(d => Number(d.valor) <= Number(filterValorMax));
+  }
+  if (filterDataInicio || filterDataFim) {
+    baseList = baseList.filter(d => {
+      if (d._isGroup) return true; // Para modelos não aplicamos filtro de data simples
+      if (!d.data_vencimento) return false;
+      const dataVenc = new Date(d.data_vencimento).getTime();
+      if (filterDataInicio && dataVenc < new Date(filterDataInicio).getTime()) return false;
+      if (filterDataFim && dataVenc > new Date(filterDataFim).getTime()) return false;
+      return true;
+    });
+  }
 
   const displayList = baseList;
 
@@ -239,7 +267,7 @@ export default function Despesas() {
             <button onClick={() => setViewMode('modelos')} className={`whitespace-nowrap text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full transition-all ${viewMode === 'modelos' ? 'bg-[#FFD700] text-black shadow-[0_0_15px_rgba(255,215,0,0.3)]' : 'text-zinc-500 bg-white/5 hover:text-white'}`}>Modelos Fixos</button>
           </div>
         </div>
-        <button onClick={() => { setForm(emptyForm); setRawAmount(''); setIsModalOpen(true); }} className="w-full md:w-auto flex items-center justify-center gap-3 px-6 md:px-8 py-4 md:py-5 bg-[#a3ff12] text-black font-black rounded-2xl md:rounded-[1.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl">
+        <button onClick={() => { setForm(emptyForm); setRawAmount(''); setEditItem(null); setIsModalOpen(true); }} className="w-full md:w-auto flex items-center justify-center gap-3 px-6 md:px-8 py-4 md:py-5 bg-[#a3ff12] text-black font-black rounded-2xl md:rounded-[1.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl">
           <Plus className="w-5 h-5 md:w-6 md:h-6" strokeWidth={3}/> NOVO LANÇAMENTO
         </button>
       </header>
@@ -418,7 +446,7 @@ export default function Despesas() {
       )}
 
       {/* Filtros */}
-      <div className="mb-6 flex flex-col md:flex-row gap-4 bg-[#15151A] p-4 rounded-2xl border border-white/5">
+      <div className="mb-6 flex flex-col xl:flex-row gap-4 bg-[#15151A] p-4 rounded-2xl border border-white/5 relative z-20">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
           <input 
@@ -429,32 +457,68 @@ export default function Despesas() {
             className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
-            <select 
-              value={filterCategoria} 
-              onChange={(e) => setFilterCategoria(e.target.value)}
-              className="w-full sm:w-auto min-w-[160px] bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
-            >
-              <option value="">Todas as Categorias</option>
-              {categorias.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+              <select 
+                value={filterCategoria} 
+                onChange={(e) => setFilterCategoria(e.target.value)}
+                className="w-full min-w-[140px] bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
+              >
+                <option value="">Categoria (Todas)</option>
+                {categorias.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+            </div>
+            <div className="relative flex-1">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+              <select 
+                value={filterTipo} 
+                onChange={(e) => setFilterTipo(e.target.value)}
+                className="w-full min-w-[140px] bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
+              >
+                <option value="">Tipo (Todos)</option>
+                <option value="variavel">Variável</option>
+                <option value="fixa">Fixa</option>
+                <option value="parcelada">Parcelada</option>
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+            </div>
           </div>
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
-            <select 
-              value={filterTipo} 
-              onChange={(e) => setFilterTipo(e.target.value)}
-              className="w-full sm:w-auto min-w-[160px] bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] appearance-none cursor-pointer transition-colors"
-            >
-              <option value="">Todos os Tipos</option>
-              <option value="variavel">Variável</option>
-              <option value="fixa">Fixa</option>
-              <option value="parcelada">Parcelada</option>
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={16} />
+          <div className="flex items-center gap-2">
+            <input 
+              type="date" 
+              value={filterDataInicio}
+              onChange={(e) => setFilterDataInicio(e.target.value)}
+              className="w-full md:w-auto bg-black/40 border border-white/10 rounded-xl px-3 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+              title="Data Início"
+            />
+            <span className="text-zinc-500">-</span>
+            <input 
+              type="date" 
+              value={filterDataFim}
+              onChange={(e) => setFilterDataFim(e.target.value)}
+              className="w-full md:w-auto bg-black/40 border border-white/10 rounded-xl px-3 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+              title="Data Fim"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="number" 
+              placeholder="Min (R$)" 
+              value={filterValorMin}
+              onChange={(e) => setFilterValorMin(e.target.value)}
+              className="w-full sm:w-24 bg-black/40 border border-white/10 rounded-xl px-3 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+            />
+            <span className="text-zinc-500">-</span>
+            <input 
+              type="number" 
+              placeholder="Max (R$)" 
+              value={filterValorMax}
+              onChange={(e) => setFilterValorMax(e.target.value)}
+              className="w-full sm:w-24 bg-black/40 border border-white/10 rounded-xl px-3 py-3.5 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+            />
           </div>
         </div>
       </div>
@@ -462,7 +526,16 @@ export default function Despesas() {
       {/* List */}
       <div className="space-y-6">
         {(() => {
-          if (loading) return <div className="py-32 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={40}/></div>;
+          if (initialLoading) {
+            return (
+              <div className="space-y-4">
+                <Skeleton className="h-24 w-full rounded-2xl" />
+                <Skeleton className="h-24 w-full rounded-2xl" />
+                <Skeleton className="h-24 w-full rounded-2xl" />
+                <Skeleton className="h-24 w-full rounded-2xl" />
+              </div>
+            );
+          }
           if (displayList.length === 0) return <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] text-zinc-500 font-black uppercase tracking-widest text-xs">Nenhum item</div>;
 
           const renderCard = (item: any) => {
@@ -521,57 +594,54 @@ export default function Despesas() {
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                         <div className="text-left sm:text-right">
-                          {editingId === item.id ? (
-                            <div className="flex items-center justify-end gap-2 mb-2" onClick={e => e.stopPropagation()}>
-                              <input
-                                type="text"
-                                className="w-24 md:w-32 bg-white/5 border border-[#a3ff12]/30 text-white text-lg md:text-xl font-black rounded-lg px-2 py-1 outline-none focus:border-[#a3ff12]"
-                                value={editingValue}
-                                onChange={(e) => setEditingValue(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleUpdateValor(item.id)}
-                                autoFocus
-                              />
-                              <button onClick={() => handleUpdateValor(item.id)} className="p-2 bg-[#a3ff12] text-black rounded-lg hover:scale-110 active:scale-95 transition-all">
-                                <Save size={14} />
-                              </button>
-                              <button onClick={() => setEditingId(null)} className="p-2 bg-white/5 text-zinc-500 rounded-lg hover:text-white transition-all">
-                                <X size={14} />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 justify-end group/edit">
-                              {!item.pago && !item._isGroup && (
-                                <>
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); handleTogglePago(item.id, false); }}
-                                    className="p-1.5 text-zinc-600 hover:text-[#a3ff12] transition-all bg-white/5 rounded-lg mr-1"
-                                    title="Marcar como pago"
-                                  >
-                                    <Check size={12} strokeWidth={4} />
-                                  </button>
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingValue(item.valor.toString()); }}
-                                    className="p-1.5 text-zinc-600 hover:text-white transition-all bg-white/5 rounded-lg"
-                                    title="Editar valor"
-                                  >
-                                    <Edit2 size={12} />
-                                  </button>
-                                </>
-                              )}
-                              {item.pago && !item._isGroup && (
+                          <div className="flex items-center gap-2 justify-end group/edit">
+                            {!item.pago && !item._isGroup && (
+                              <>
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); handleTogglePago(item.id, true); }}
-                                  className="p-1.5 text-[#a3ff12] hover:text-[#FF4D4D] transition-all bg-[#a3ff12]/10 rounded-lg mr-1 group-hover/edit:opacity-100 opacity-50"
-                                  title="Desfazer pagamento"
+                                  onClick={(e) => { e.stopPropagation(); handleTogglePago(item.id, false); }}
+                                  className="p-1.5 text-zinc-600 hover:text-[#a3ff12] transition-all bg-white/5 rounded-lg mr-1"
+                                  title="Marcar como pago"
                                 >
                                   <Check size={12} strokeWidth={4} />
                                 </button>
-                              )}
-                              <p className={`text-xl md:text-2xl font-black tracking-tighter ${item.pago ? 'text-[#a3ff12]' : 'text-white'}`}>
-                                R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </p>
-                            </div>
-                          )}
+                              </>
+                            )}
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setEditItem(item);
+                                setForm({
+                                  descricao: item.descricao,
+                                  valor: item.valor,
+                                  data_vencimento: item.data_vencimento ? item.data_vencimento.split('T')[0] : '',
+                                  tipo: item.tipo,
+                                  numero_parcelas: item.numero_parcelas || '2',
+                                  valor_total: item.valor_total || '',
+                                  observacoes: item.observacoes || '',
+                                  categoria: item.categoria || 'Outros',
+                                  usa_media: item.usa_media || false,
+                                });
+                                setRawAmount(item.valor.toString());
+                                setIsModalOpen(true);
+                              }}
+                              className="p-1.5 text-zinc-600 hover:text-white transition-all bg-white/5 rounded-lg"
+                              title="Editar"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                            {item.pago && !item._isGroup && (
+                              <button 
+                              onClick={(e) => { e.stopPropagation(); handleTogglePago(item.id, true); }}
+                              className="p-1.5 text-[#a3ff12] hover:text-[#FF4D4D] transition-all bg-[#a3ff12]/10 rounded-lg mr-1 group-hover/edit:opacity-100 opacity-50"
+                              title="Desfazer pagamento"
+                            >
+                              <Check size={12} strokeWidth={4} />
+                            </button>
+                            )}
+                            <p className={`text-xl md:text-2xl font-black tracking-tighter ${item.pago ? 'text-[#a3ff12]' : 'text-white'}`}>
+                              R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
                           {item._isGroup && <p className="text-[8px] md:text-[9px] font-black text-zinc-500 uppercase">por parcela</p>}
                         </div>
                         <div className="flex items-center gap-2">
@@ -720,10 +790,14 @@ export default function Despesas() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setIsModalOpen(false)}/>
-          <form onSubmit={handleSubmit} className="bg-[#15151A] border border-white/10 rounded-[2rem] md:rounded-[2.5rem] w-full max-w-xl p-6 md:p-10 relative z-10 shadow-2xl animate-in zoom-in duration-300 my-8 space-y-4 md:space-y-5">
-            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter">Novo Gasto</h2>
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-[2rem] shadow-2xl p-6 md:p-8 animate-in fade-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 overflow-y-auto max-h-[90vh] no-scrollbar">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors">
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter mb-6">{editItem ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Tipo */}
             <div>
@@ -740,9 +814,13 @@ export default function Despesas() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={LC}>Descrição</label>
-                <input required value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })}
-                  className={IC} placeholder="Ex: Aluguel, Netflix..."/>
+                <Input 
+                  label="Descrição"
+                  required 
+                  value={form.descricao} 
+                  onChange={e => setForm({ ...form, descricao: e.target.value })}
+                  placeholder="Ex: Aluguel, Netflix..."
+                />
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1.5">
@@ -755,10 +833,29 @@ export default function Despesas() {
               </div>
             </div>
 
+            {form.tipo === 'fixa' && (
+              <div 
+                onClick={() => setForm({...form, usa_media: !form.usa_media})}
+                className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-center justify-between group ${form.usa_media ? 'bg-[#a3ff12]/10 border-[#a3ff12]/30' : 'bg-black/40 border-white/10 hover:border-white/20'}`}
+              >
+                <div>
+                  <h4 className={`text-sm font-black transition-colors ${form.usa_media ? 'text-[#a3ff12]' : 'text-white group-hover:text-[#a3ff12]'}`}>
+                    Gerar Valor Automaticamente
+                  </h4>
+                  <p className="text-[10px] font-bold text-zinc-500 mt-0.5">
+                    Calcula a média dos últimos 6 meses para lançamentos futuros
+                  </p>
+                </div>
+                <div className={`w-10 h-6 rounded-full p-1 transition-colors ${form.usa_media ? 'bg-[#a3ff12]' : 'bg-white/10'}`}>
+                  <div className={`w-4 h-4 rounded-full transition-transform ${form.usa_media ? 'translate-x-4 bg-[#15151A]' : 'translate-x-0 bg-zinc-400'}`} />
+                </div>
+              </div>
+            )}
+
             {/* VALOR COM SELETOR DE MODO (Para Parcelada) */}
             <div className="p-5 bg-white/5 border border-white/10 rounded-2xl space-y-4">
               <div className="flex items-center justify-between">
-                <label className={LC}>Valor</label>
+                <label className={LC}>{form.tipo === 'fixa' && form.usa_media ? 'Valor Inicial (Média de Partida)' : 'Valor'}</label>
                 {form.tipo === 'parcelada' && (
                   <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
                     <button type="button" onClick={() => setParcelInputMode('parcela')} 
@@ -773,10 +870,17 @@ export default function Despesas() {
                 )}
               </div>
               <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18}/>
-                <input required type="number" step="0.01" min="0.01" value={rawAmount}
+                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 z-10" size={18}/>
+                <Input 
+                  required 
+                  type="number" 
+                  step="0.01" 
+                  min="0.01" 
+                  value={rawAmount}
                   onChange={e => setRawAmount(e.target.value)} 
-                  className={`${IC} pl-12 text-xl`} placeholder="0,00"/>
+                  className="pl-12 text-xl" 
+                  placeholder="0,00"
+                />
               </div>
               
               {/* Preview para parcelada */}
@@ -797,15 +901,23 @@ export default function Despesas() {
             <div className="grid grid-cols-2 gap-4">
               {form.tipo === 'variavel' && (
                 <div className="col-span-2">
-                  <label className={LC}>Data de Vencimento</label>
-                  <input required type="date" value={form.data_vencimento}
-                    onChange={e => setForm({ ...form, data_vencimento: e.target.value })} className={IC}/>
+                  <Input 
+                    label="Data de Vencimento"
+                    required 
+                    type="date" 
+                    value={form.data_vencimento}
+                    onChange={e => setForm({ ...form, data_vencimento: e.target.value })} 
+                  />
                 </div>
               )}
               {form.tipo === 'fixa' && (
-                <div className="col-span-2">
-                  <label className={LC}>Dia de Vencimento (1-31)</label>
-                  <input required type="number" min="1" max="31"
+                <div className="col-span-2 space-y-4">
+                  <Input 
+                    label="Dia de Vencimento (1-31)"
+                    required 
+                    type="number" 
+                    min="1" 
+                    max="31"
                     value={form.data_vencimento ? new Date(form.data_vencimento + 'T12:00:00').getDate() : ''}
                     onChange={e => {
                       const day = parseInt(e.target.value);
@@ -815,20 +927,30 @@ export default function Despesas() {
                         setForm({ ...form, data_vencimento: d.toISOString().split('T')[0] });
                       }
                     }}
-                    className={IC} placeholder="Ex: 5"/>
+                    placeholder="Ex: 5"
+                  />
                 </div>
               )}
               {form.tipo === 'parcelada' && (
                 <>
                   <div>
-                    <label className={LC}>Nº Parcelas</label>
-                    <input required type="number" min="2" value={form.numero_parcelas}
-                      onChange={e => setForm({ ...form, numero_parcelas: e.target.value })} className={IC}/>
+                    <Input 
+                      label="Nº Parcelas"
+                      required 
+                      type="number" 
+                      min="2" 
+                      value={form.numero_parcelas}
+                      onChange={e => setForm({ ...form, numero_parcelas: e.target.value })} 
+                    />
                   </div>
                   <div>
-                    <label className={LC}>1ª Parcela em</label>
-                    <input required type="date" value={form.data_vencimento}
-                      onChange={e => setForm({ ...form, data_vencimento: e.target.value })} className={IC}/>
+                    <Input 
+                      label="1ª Parcela em"
+                      required 
+                      type="date" 
+                      value={form.data_vencimento}
+                      onChange={e => setForm({ ...form, data_vencimento: e.target.value })} 
+                    />
                   </div>
                 </>
               )}
@@ -841,11 +963,11 @@ export default function Despesas() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button type="submit" className="flex-1 py-4 bg-[#a3ff12] text-black font-black rounded-xl hover:scale-105 transition-all shadow-xl">CONFIRMAR GASTO</button>
-              <button type="button" onClick={() => setIsModalOpen(false)}
-                className="px-8 py-4 bg-white/5 text-white font-black rounded-xl hover:bg-white/10 transition-all">CANCELAR</button>
+              <Button type="submit" className="flex-1" isLoading={createDespesa.isPending}>CONFIRMAR GASTO</Button>
+              <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>CANCELAR</Button>
             </div>
           </form>
+          </div>
         </div>
       )}
 
@@ -856,11 +978,14 @@ export default function Despesas() {
           <div className="bg-[#15151A] border border-white/10 rounded-[2.5rem] w-full max-w-sm p-10 relative z-10 shadow-2xl animate-in zoom-in duration-300 space-y-5">
             <h2 className="text-2xl font-black text-white">Nova Categoria</h2>
             <div>
-              <label className={LC}>Nome</label>
-              <input value={newCat.nome} onChange={e => setNewCat({ ...newCat, nome: e.target.value })}
-                className={IC} placeholder="Ex: Pets, Assinaturas..."/>
+              <Input 
+                label="Nome"
+                value={newCat.nome} 
+                onChange={e => setNewCat({ ...newCat, nome: e.target.value })}
+                placeholder="Ex: Pets, Assinaturas..."
+              />
             </div>
-            <button onClick={handleAddCat} className="w-full py-4 bg-[#a3ff12] text-black font-black rounded-xl hover:scale-105 transition-all">CRIAR CATEGORIA</button>
+            <Button className="w-full" onClick={handleAddCat} isLoading={createCategoria.isPending}>CRIAR CATEGORIA</Button>
           </div>
         </div>
       )}
