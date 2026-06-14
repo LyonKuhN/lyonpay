@@ -53,18 +53,20 @@ export default function Pagamentos() {
   const { data: prevMonthDespesasRaw = [], isLoading: load2 } = useQuery({ queryKey: ['despesas', prevYear, prevMonth], queryFn: () => apiFetch(`/api/despesas?month=${prevMonth}&year=${prevYear}`), enabled: !!token });
   const { data: atrasadasRaw = [], isLoading: load3 } = useQuery({ queryKey: ['despesas', 'atrasadas'], queryFn: () => apiFetch('/api/despesas/atrasadas'), enabled: !!token });
   const { data: categoriasAll = [], isLoading: load4 } = useQuery({ queryKey: ['categorias'], queryFn: () => apiFetch('/api/categorias'), enabled: !!token });
+  const { data: saldoData = { saldoGlobal: 0 }, isLoading: loadSaldo } = useQuery({ queryKey: ['dashboard', 'saldo'], queryFn: () => apiFetch('/api/dashboard/saldo'), enabled: !!token });
 
   const despesas = Array.isArray(despesasRaw) ? despesasRaw : [];
   const prevMonthDespesas = Array.isArray(prevMonthDespesasRaw) ? prevMonthDespesasRaw : [];
   const atrasadas = Array.isArray(atrasadasRaw) ? atrasadasRaw : [];
   const categorias = Array.isArray(categoriasAll) ? categoriasAll.filter((c: any) => c.tipo === 'despesa') : [];
 
-  const loading = load1 || load2 || load3 || load4;
+  const loading = load1 || load2 || load3 || load4 || loadSaldo;
 
   const togglePagoMutation = useMutation({
     mutationFn: ({ id, isPago }: { id: string; isPago: boolean }) => apiFetch(`/api/despesas/${id}/${isPago ? 'pendente' : 'pagar'}`, { method: 'PATCH' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'saldo'] });
     }
   });
 
@@ -72,6 +74,7 @@ export default function Pagamentos() {
     mutationFn: ({ id, valor }: { id: string; valor: number }) => apiFetch(`/api/despesas/${id}/valor`, { method: 'PATCH', body: JSON.stringify({ valor }) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'saldo'] });
       setEditingId(null);
     }
   });
@@ -152,6 +155,11 @@ export default function Pagamentos() {
   const pendentePrev = prevMonthDespesas.filter(d => !d.pago).reduce((a, c) => a + Number(c.valor), 0);
   const diffPendente = calculateDiff(pendenteCurr, pendentePrev);
 
+  const atrasadasTotal = atrasadasMesesAnteriores.reduce((a: number, c: any) => a + Number(c.valor), 0);
+  const pendenteTotal = pendenteCurr + atrasadasTotal;
+  const saldoAtual = Number(saldoData.saldoGlobal || 0);
+  const saldoProjetado = saldoAtual - pendenteTotal;
+
   const pagaCurr = pagas.reduce((a, c) => a + Number(c.valor), 0);
   const pagaPrev = prevMonthDespesas.filter(d => d.pago).reduce((a, c) => a + Number(c.valor), 0);
   const diffPaga = calculateDiff(pagaCurr, pagaPrev);
@@ -160,6 +168,41 @@ export default function Pagamentos() {
 
   return (
     <div className="animate-in fade-in duration-700 max-w-6xl mx-auto pt-4 pb-20 px-4 md:px-6">
+
+      {/* Projeção de Caixa */}
+      <div className="mb-8 p-6 rounded-[2rem] bg-[#15151A] border border-white/5 shadow-2xl overflow-hidden relative group">
+        <div className={`absolute -top-10 -right-10 w-40 h-40 blur-[80px] opacity-20 transition-all ${saldoProjetado >= 0 ? 'bg-[#a3ff12]' : 'bg-[#FF4D4D]'}`} />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h2 className="text-white font-black text-xl md:text-2xl tracking-tighter flex items-center gap-2">
+              <Wallet className="w-6 h-6 text-[#a3ff12]" />
+              Projeção de Caixa
+            </h2>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Saldo atual vs Contas a Pagar</p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 bg-white/5 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
+            <div>
+              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-1">Saldo Disponível</p>
+              <p className="text-lg font-black text-white">R$ {saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="hidden sm:block w-px bg-white/10" />
+            <div>
+              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-1">A Pagar (Total)</p>
+              <p className="text-lg font-black text-[#FFD700]">- R$ {pendenteTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="hidden sm:block w-px bg-white/10" />
+            <div>
+              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-1">
+                {saldoProjetado >= 0 ? 'Vai Sobrar' : 'Vai Faltar'}
+              </p>
+              <p className={`text-2xl font-black leading-none mt-1 ${saldoProjetado >= 0 ? 'text-[#a3ff12]' : 'text-[#FF4D4D]'}`}>
+                {saldoProjetado >= 0 ? '+' : ''}R$ {saldoProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Espelho de Atrasos de Meses Anteriores */}
       {atrasadasMesesAnteriores.length > 0 && (

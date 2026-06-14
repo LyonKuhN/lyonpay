@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDown, DollarSign, Receipt, TrendingUp, Calendar, Tag, ChevronDown, Plus, Loader2 } from 'lucide-react';
+import { ArrowDown, DollarSign, Receipt, TrendingUp, Calendar, Tag, ChevronDown, Plus, Loader2, Edit2, Trash2, Check, X, LayoutList, Layers } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +22,10 @@ export default function Receitas() {
 
   const [newCat, setNewCat] = useState({ nome: '', cor: '#a3ff12', tipo: 'receita' });
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  
+  const [viewMode, setViewMode] = useState<'grouped' | 'list'>('grouped');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
 
   // Filtros Avançados
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,6 +79,30 @@ export default function Receitas() {
       toast.error('Erro ao criar categoria');
     }
   });
+
+  const updateValor = useMutation({
+    mutationFn: ({ id, valor }: { id: string; valor: number }) => apiFetch(`/api/receitas/${id}/valor`, { method: 'PATCH', body: JSON.stringify({ valor }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receitas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'saldo'] });
+      setEditingId(null);
+      toast.success('Valor atualizado');
+    }
+  });
+
+  const deleteReceita = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/receitas/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receitas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'saldo'] });
+      toast.success('Receita excluída');
+    }
+  });
+
+  const handleUpdateValor = (id: string) => {
+    const valorNum = parseFloat(editingValue.replace(',', '.'));
+    if (!isNaN(valorNum)) updateValor.mutate({ id, valor: valorNum });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,6 +228,15 @@ export default function Receitas() {
         </div>
       </div>
 
+      <div className="flex justify-end gap-2 mb-6 relative z-20">
+        <button onClick={() => setViewMode('grouped')} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${viewMode === 'grouped' ? 'bg-[#a3ff12] text-black shadow-[0_0_15px_rgba(163,255,18,0.3)]' : 'bg-[#15151A] text-zinc-500 hover:text-white border border-white/5'}`}>
+          <Layers size={14} /> Agrupado
+        </button>
+        <button onClick={() => setViewMode('list')} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${viewMode === 'list' ? 'bg-[#a3ff12] text-black shadow-[0_0_15px_rgba(163,255,18,0.3)]' : 'bg-[#15151A] text-zinc-500 hover:text-white border border-white/5'}`}>
+          <LayoutList size={14} /> Lista
+        </button>
+      </div>
+
       <div className="space-y-6">
         {loading ? (
           <div className="py-40 flex justify-center"><Loader2 className="animate-spin text-[#a3ff12]" size={48} /></div>
@@ -220,6 +257,60 @@ export default function Receitas() {
             if (!byYearMonth[year]) byYearMonth[year] = {};
             if (!byYearMonth[year][month]) byYearMonth[year][month] = [];
             byYearMonth[year][month].push(exp);
+          }
+
+          if (viewMode === 'list') {
+            const sorted = [...filteredReceitas].sort((a,b) => new Date(b.data_recebimento).getTime() - new Date(a.data_recebimento).getTime());
+            return (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 relative z-10">
+                {sorted.map((item: any) => (
+                  <div key={item.id} className="group relative p-6 md:p-8 rounded-3xl bg-[#15151A] border border-white/5 hover:border-[#a3ff12]/30 transition-all shadow-xl">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-[#a3ff12]/10 text-[#a3ff12] flex items-center justify-center">
+                          <DollarSign className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-white">{item.descricao}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="px-2 py-1 bg-white/5 rounded-md text-[9px] font-black text-zinc-400 uppercase">{item.categoria}</span>
+                            <span className="text-[9px] font-black text-zinc-500 uppercase">{new Date(item.data_recebimento).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {editingId === item.id ? (
+                          <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl">
+                            <input 
+                              type="number" 
+                              step="0.01"
+                              value={editingValue} 
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white font-bold outline-none text-right"
+                              autoFocus
+                            />
+                            <button onClick={() => handleUpdateValor(item.id)} className="p-2 bg-[#a3ff12] text-black rounded-lg"><Check size={14}/></button>
+                            <button onClick={() => setEditingId(null)} className="p-2 bg-white/10 text-white rounded-lg"><X size={14}/></button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-end gap-2">
+                            <p className="text-2xl font-black text-[#a3ff12]">+ R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => { setEditingId(item.id); setEditingValue(item.valor.toString()); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+                                <Edit2 size={14} />
+                              </button>
+                              <button onClick={() => { if(confirm('Excluir esta receita?')) deleteReceita.mutate(item.id); }} className="p-2 rounded-lg bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] transition-colors">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
           }
 
           return Object.keys(byYearMonth).sort((a,b) => b.localeCompare(a)).map(year => (
@@ -273,9 +364,33 @@ export default function Receitas() {
                                     </div>
                                   </div>
 
-                                  <div className="text-left sm:text-right">
-                                    <p className="text-2xl md:text-5xl font-black text-[#a3ff12] tracking-tighter">+ R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                    <p className="text-[8px] md:text-[10px] font-black text-zinc-600 uppercase tracking-widest">RECEBIDO</p>
+                                  <div className="flex items-center gap-4">
+                                    {editingId === item.id ? (
+                                      <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl">
+                                        <input 
+                                          type="number" 
+                                          step="0.01"
+                                          value={editingValue} 
+                                          onChange={(e) => setEditingValue(e.target.value)}
+                                          className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white font-bold outline-none text-right"
+                                          autoFocus
+                                        />
+                                        <button onClick={() => handleUpdateValor(item.id)} className="p-2 bg-[#a3ff12] text-black rounded-lg"><Check size={14}/></button>
+                                        <button onClick={() => setEditingId(null)} className="p-2 bg-white/10 text-white rounded-lg"><X size={14}/></button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-col items-end gap-2">
+                                        <p className="text-2xl md:text-5xl font-black text-[#a3ff12] tracking-tighter">+ R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button onClick={() => { setEditingId(item.id); setEditingValue(item.valor.toString()); }} className="p-2 md:p-3 rounded-lg md:rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors shadow-lg">
+                                            <Edit2 size={16} />
+                                          </button>
+                                          <button onClick={() => { if(confirm('Excluir esta receita?')) deleteReceita.mutate(item.id); }} className="p-2 md:p-3 rounded-lg md:rounded-xl bg-[#FF4D4D]/10 hover:bg-[#FF4D4D]/20 text-[#FF4D4D] transition-colors shadow-lg">
+                                            <Trash2 size={16} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>

@@ -674,15 +674,43 @@ app.post('/api/receitas', authenticateToken, async (req, res) => {
   }
 });
 
+app.patch('/api/receitas/:id/valor', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { valor } = req.body;
+    await pool.query('UPDATE public.receitas SET valor = $1 WHERE id = $2 AND user_id = $3', [valor, id, req.user.id]);
+    res.json({ message: 'Valor atualizado com sucesso' });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/receitas/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM public.receitas WHERE id = $1 AND user_id = $2', [id, req.user.id]);
+    res.json({ message: 'Receita excluída com sucesso' });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- DESPESAS ROUTES ---
 app.get('/api/despesas', authenticateToken, async (req, res) => {
   const { month, year } = req.query;
   let query = 'SELECT * FROM public.despesas WHERE user_id = $1 AND is_modelo = false';
   const params = [req.user.id];
 
-  if (month && year) {
-    query += ' AND EXTRACT(MONTH FROM data_vencimento) = $2 AND EXTRACT(YEAR FROM data_vencimento) = $3';
-    params.push(parseInt(month), parseInt(year));
+  if (year) {
+    if (month && month !== 'all' && month !== '0') {
+      query += ' AND EXTRACT(MONTH FROM data_vencimento) = $2 AND EXTRACT(YEAR FROM data_vencimento) = $3';
+      params.push(parseInt(month), parseInt(year));
+    } else {
+      query += ' AND EXTRACT(YEAR FROM data_vencimento) = $2';
+      params.push(parseInt(year));
+    }
   }
 
   query += ' ORDER BY data_vencimento DESC';
@@ -722,7 +750,7 @@ app.get('/api/despesas/modelos', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/despesas', authenticateToken, async (req, res) => {
-  const { descricao, valor, data_vencimento, tipo, numero_parcelas, valor_total, observacoes, categoria } = req.body;
+  const { descricao, valor, data_vencimento, tipo, numero_parcelas, valor_total, observacoes, categoria, datas_personalizadas } = req.body;
   const groupId = crypto.randomUUID(); 
   const v_cat = categoria || 'Outros';
 
@@ -733,18 +761,24 @@ app.post('/api/despesas', authenticateToken, async (req, res) => {
 
     if (tipo === 'parcelada' && v_parcelas > 1) {
       const generated = [];
+      const useCustom = Array.isArray(datas_personalizadas) && datas_personalizadas.length === v_parcelas;
       // Parsear a data manualmente para evitar problemas de fuso horário (YYYY-MM-DD)
-      const [year, month, day] = data_vencimento.split('-').map(Number);
+      const [year, month, day] = (data_vencimento || '2000-01-01').split('-').map(Number);
       
       for (let i = 0; i < v_parcelas; i++) {
-        // Criar a data baseada nos componentes e adicionar os meses
-        const date = new Date(year, (month - 1) + i, day);
-        
-        // Ajustar para o formato YYYY-MM-DD para salvar no banco corretamente como DATE
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        const currentVencimento = `${y}-${m}-${d}`;
+        let currentVencimento;
+        if (useCustom) {
+          currentVencimento = datas_personalizadas[i];
+        } else {
+          // Criar a data baseada nos componentes e adicionar os meses
+          const date = new Date(year, (month - 1) + i, day);
+          
+          // Ajustar para o formato YYYY-MM-DD para salvar no banco corretamente como DATE
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          currentVencimento = `${y}-${m}-${d}`;
+        }
 
         const resInsert = await pool.query(
           `INSERT INTO public.despesas (user_id, descricao, valor, data_vencimento, tipo, numero_parcelas, valor_total, observacoes, parcela_atual, group_id, categoria) 
@@ -1114,9 +1148,39 @@ app.listen(PORT, () => console.log(`Servidor Lyonk rodando na porta ${PORT}`));
 // --- DASHBOARD ROUTES ---
 app.get('/api/dashboard/evolucao', authenticateToken, async (req, res) => {
   try {
-    const receitas = await pool.query(`SELECT EXTRACT(MONTH FROM data_recebimento) as mes, EXTRACT(YEAR FROM data_recebimento) as ano, SUM(valor) as total FROM public.receitas WHERE user_id = $1 AND data_recebimento >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months') GROUP BY ano, mes ORDER BY ano, mes`, [req.user.id]);
-    const despesas = await pool.query(`SELECT EXTRACT(MONTH FROM data_vencimento) as mes, EXTRACT(YEAR FROM data_vencimento) as ano, SUM(valor) as total FROM public.despesas WHERE user_id = $1 AND is_modelo = false AND data_vencimento >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months') GROUP BY ano, mes ORDER BY ano, mes`, [req.user.id]);
+    const { year } = req.query;
+    let queryReceitas = `SELECT EXTRACT(MONTH FROM data_recebimento) as mes, EXTRACT(YEAR FROM data_recebimento) as ano, SUM(valor) as total FROM public.receitas WHERE user_id = $1`;
+    let queryDespesas = `SELECT EXTRACT(MONTH FROM data_vencimento) as mes, EXTRACT(YEAR FROM data_vencimento) as ano, SUM(valor) as total FROM public.despesas WHERE user_id = $1 AND is_modelo = false`;
+    let params = [req.user.id];
+
+    if (year) {
+      queryReceitas += ` AND EXTRACT(YEAR FROM data_recebimento) = $2`;
+      queryDespesas += ` AND EXTRACT(YEAR FROM data_vencimento) = $2`;
+      params.push(parseInt(year));
+    } else {
+      queryReceitas += ` AND data_recebimento >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')`;
+      queryDespesas += ` AND data_vencimento >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')`;
+    }
+
+    queryReceitas += ` GROUP BY ano, mes ORDER BY ano, mes`;
+    queryDespesas += ` GROUP BY ano, mes ORDER BY ano, mes`;
+
+    const receitas = await pool.query(queryReceitas, params);
+    const despesas = await pool.query(queryDespesas, params);
     res.json({ receitas: receitas.rows, despesas: despesas.rows });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/dashboard/saldo', authenticateToken, async (req, res) => {
+  try {
+    const receitas = await pool.query('SELECT SUM(valor) as total FROM public.receitas WHERE user_id = $1', [req.user.id]);
+    const despesas = await pool.query('SELECT SUM(valor) as total FROM public.despesas WHERE user_id = $1 AND pago = true AND is_modelo = false', [req.user.id]);
+    const totalRec = parseFloat(receitas.rows[0].total || 0);
+    const totalDes = parseFloat(despesas.rows[0].total || 0);
+    res.json({ saldoGlobal: totalRec - totalDes });
   } catch (err) {
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
     res.status(500).json({ error: err.message });

@@ -1,0 +1,183 @@
+categoria,descricao,valor,data_vencimento,pago,data_pagamento,observacoes,tipo,numero_parcelas,valor_total,parcela_atual,is_modelo,created_at,updated_at
+Outros,Cartão (Nubank - Herik),0.00,1900-01-22,true,2025-07-02,null,fixa,null,null,null,true,2025-06-08 05:27:18.426371+00,2025-10-08 00:58:06.115788+00
+Moradia,Energia elétrica (CELESC),120.00,2025-08-05,true,2025-09-06,Pagar pelo APP Celesc,fixa,null,null,1,false,2025-09-06 02:23:26.093826+00,2025-09-06 02:23:31.017873+00
+Moradia,Agua (VISAN),67.00,2025-08-05,true,2025-09-06,Entrar no Site da VISAN,fixa,null,null,1,false,2025-09-06 02:23:26.105072+00,2025-09-06 02:23:28.532091+00
+Outros,Cartão (Amazon - Herik),0.00,2025-08-05,true,2025-09-06,APP Bradesco,fixa,null,null,1,false,2025-09-06 02:23:26.129775+00,2025-09-06 02:23:29.129757+00
+Moradia,CAIXA (Casa),695.00,2025-09-06,true,2025-09-22,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2025-09-06 02:23:39.883312+00,2025-09-22 22:48:19.540604+00
+Outros,Cartão (Nubank - Herik),0.00,2025-09-05,true,2025-09-22,null,fixa,null,null,1,false,2025-09-06 02:23:39.915294+00,2025-09-22 22:48:15.886281+00
+Outros,Cartão (Nubank - Herik),0.00,2025-08-05,true,2025-09-06,null,fixa,null,null,1,false,2025-09-06 02:23:26.104959+00,2025-09-06 02:23:30.040417+00
+Moradia,TIM (Herik & Juliana),158.00,2025-09-05,true,2025-09-22,Pagar pelo APP TIM,fixa,null,null,1,false,2025-09-06 02:23:39.877047+00,2025-09-22 22:48:16.390079+00
+Moradia,Agua (VISAN),67.00,2025-09-05,true,2025-09-22,Entrar no Site da VISAN,fixa,null,null,1,false,2025-09-06 02:23:39.883404+00,2025-09-22 22:48:17.020131+00
+Outros,Cartão (BMG - Herik),0.00,2025-09-05,true,2025-09-22,null,fixa,null,null,1,false,2025-09-06 02:23:39.911669+00,2025-09-22 22:48:17.678712+00
+Outros,Cartão (Amazon - Herik),0.00,1900-01-25,true,2025-07-02,APP Bradesco,fixa,null,null,null,true,2025-06-08 05:29:00.707712+00,2025-10-08 01:09:14.676681+00
+Moradia,BKUP (Internet),100.00,2025-06-11,true,2025-06-08,Entrar em conversa no Whats para encontrar Boleto,fixa,null,null,null,false,2025-06-08 05:18:36.550229+00,2025-06-14 23:07:28.129985+00
+Lazer,Magazine Luiza,127.00,2025-06-10,true,2025-06-08,Presente para mãe da Ana,variavel,null,null,null,false,2025-06-08 05:31:54.149019+00,2025-06-14 23:07:28.129985+00
+Moradia,CAIXA (Casa),695.00,2025-06-06,true,2025-06-08,Transferir dinheiro para Conta CAIXA,fixa,null,null,null,true,2025-06-08 05:23:33.537582+00,2025-07-02 01:51:01.619589+00
+Moradia,Energia elétrica (CELESC),120.00,1900-01-05,true,2025-06-08,Pagar pelo APP Celesc,fixa,null,null,null,true,2025-06-08 05:25:03.496464+00,2025-07-02 01:52:18.713058+00
+Moradia,Agua (VISAN),67.00,1900-01-05,true,2025-06-08,Entrar no Site da VISAN,fixa,null,null,null,true,2025-06-08 05:25:55.78577+00,2025-07-02 01:52:24.556975+00
+Outros,Cartão (BMG - Herik),0.00,1900-01-05,true,2025-06-10,null,fixa,null,null,null,true,2025-06-08 05:30:31.128276+00,2025-07-02 01:52:32.110776+00
+Outros,Cartão (Inter - Herik),0.00,2025-06-11,true,2025-07-02,null,fixa,null,null,null,false,2025-06-08 05:28:22.297306+00,2025-07-02 01:44:57.36656+00
+Moradia,TIM (Ana),47.00,2025-06-21,true,2025-09-06,Pagar pelo APP TIM,fixa,null,null,null,false,2025-06-08 05:21:02.279556+00,2025-09-06 02:22:54.02002+00
+Outros,Cartão (Nubank - Ana),0.00,2025-06-26,true,2025-09-06,null,fixa,null,null,null,false,2025-06-08 05:27:36.234485+00,2025-09-06 02:22:53.223716+00
+Outros,Cartão (Santander - Ana),80.00,2025-07-06,true,2025-09-06,null,fixa,null,null,1,false,2025-06-08 05:43:44.421026+00,2025-09-06 02:23:06.315722+00
+Moradia,Energia elétrica (CELESC),120.00,2025-07-11,true,2025-09-06,Pagar pelo APP Celesc,fixa,null,null,1,false,2025-06-08 05:43:44.425227+00,2025-09-06 02:23:11.478823+00
+Moradia,CAIXA (Casa),695.00,2025-07-06,true,2025-09-06,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2025-06-08 05:43:44.422212+00,2025-09-06 02:23:07.102766+00
+Outros,Cartão (Havan - Herik),0.00,2025-07-26,true,2025-09-06,null,fixa,null,null,1,false,2025-06-08 05:43:44.435149+00,2025-09-06 02:23:15.911961+00
+Outros,Cartão (Nubank - Ana),0.00,2025-07-26,true,2025-09-06,null,fixa,null,null,1,false,2025-06-08 05:43:44.437511+00,2025-09-06 02:23:15.413825+00
+Moradia,Agua (VISAN),67.00,2025-07-11,true,2025-09-06,Entrar no Site da VISAN,fixa,null,null,1,false,2025-06-08 05:43:44.433892+00,2025-09-06 02:23:11.987353+00
+Outros,Cartão (Inter - Herik),0.00,2025-07-11,true,2025-09-06,null,fixa,null,null,1,false,2025-06-08 05:43:44.46421+00,2025-09-06 02:23:10.193977+00
+Outros,Cartão (Nubank - Herik),0.00,2025-07-23,true,2025-09-06,null,fixa,null,null,1,false,2025-06-08 05:43:44.462379+00,2025-09-06 02:23:14.91449+00
+Moradia,TIM (Ana),47.00,2025-07-21,true,2025-09-06,Pagar pelo APP TIM,fixa,null,null,1,false,2025-06-08 05:43:44.461732+00,2025-09-06 02:23:13.650581+00
+Outros,Cartão (Amazon - Herik),0.00,2025-07-26,true,2025-09-06,APP Bradesco,fixa,null,null,1,false,2025-06-08 05:43:44.473579+00,2025-09-06 02:23:16.376239+00
+Moradia,BKUP (Internet),100.00,2025-07-11,true,2025-09-06,Entrar em conversa no Whats para encontrar Boleto,fixa,null,null,1,false,2025-06-08 05:43:44.467182+00,2025-09-06 02:23:10.9665+00
+Moradia,TIM (Herik),70.00,2025-07-08,true,2025-09-06,Pagar pelo APP TIM,fixa,null,null,1,false,2025-06-08 05:43:44.458657+00,2026-02-06 14:21:07.582503+00
+Outros,Cartão (BMG - Herik),0.00,2025-07-06,true,2025-09-06,null,fixa,null,null,1,false,2025-06-08 05:43:44.476743+00,2025-09-06 02:23:08.070088+00
+Outros,Cartão (Havan - Herik),0.00,2025-06-26,true,2025-06-28,null,fixa,null,null,null,false,2025-06-08 05:32:28.673912+00,2025-06-28 13:13:04.513721+00
+Moradia,TIM (Herik),60.00,2025-08-20,true,2025-09-06,Pagar pelo APP TIM,fixa,null,null,1,false,2025-09-06 02:23:26.089583+00,2026-02-06 14:21:57.120934+00
+Moradia,CAIXA (Casa),695.00,2025-08-06,true,2025-09-06,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2025-09-06 02:23:26.106012+00,2025-09-06 02:23:31.447783+00
+Outros,Cartão (BMG - Herik),0.00,2025-08-05,true,2025-09-06,null,fixa,null,null,1,false,2025-09-06 02:23:26.136518+00,2025-09-06 02:23:27.651231+00
+Outros,Cartão (Amazon - Herik),0.00,2025-09-05,true,2025-09-22,APP Bradesco,fixa,null,null,1,false,2025-09-06 02:23:39.879956+00,2025-09-22 22:48:18.982484+00
+Moradia,Energia elétrica (CELESC),120.00,2025-09-05,true,2025-09-22,Pagar pelo APP Celesc,fixa,null,null,1,false,2025-09-06 02:23:39.885344+00,2025-09-22 22:48:14.794877+00
+Cartão de Credito,Cartão (Havan - Herik),281.92,2025-10-26,true,2025-10-31,null,fixa,null,null,1,false,2025-10-08 01:27:25.236139+00,2025-10-31 21:22:32.716202+00
+Moradia,TIM (Ana),47.00,2025-10-21,true,2025-10-31,null,fixa,null,null,1,false,2025-10-08 01:27:25.237164+00,2025-10-31 21:23:46.468989+00
+Outros,Cartão (BMG - Herik),0.00,2025-10-05,true,2025-10-08,null,fixa,null,null,1,false,2025-09-30 02:50:06.666644+00,2025-10-08 01:12:12.950883+00
+Moradia,Energia elétrica (CELESC),165.43,2025-10-05,true,2025-10-08,Pagar pelo APP Celesc,fixa,null,null,1,false,2025-09-30 02:50:06.665315+00,2025-10-08 01:04:52.025851+00
+Outros,Cartão (Nubank - Herik),1669.05,2025-10-22,true,2025-10-31,null,fixa,null,null,1,false,2025-09-30 02:50:06.66897+00,2025-10-31 21:22:28.454781+00
+Moradia,TIM (Herik & Juliana),160.98,2025-10-05,true,2025-10-08,Pagar pelo APP TIM,fixa,null,null,1,false,2025-09-30 02:50:06.667099+00,2025-10-08 01:11:15.507127+00
+Outros,Cartão (Amazon - Herik),358.19,2025-10-25,true,2025-10-21,APP Bradesco,fixa,null,null,1,false,2025-09-30 02:50:06.697615+00,2025-10-21 16:19:48.160335+00
+Moradia,Agua (VISAN),73.01,2025-10-05,true,2025-10-08,Entrar no Site da VISAN,fixa,null,null,1,false,2025-09-30 02:50:06.699818+00,2025-10-08 01:07:40.386562+00
+Moradia,CAIXA (Casa),700.00,2025-10-06,true,2025-10-08,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2025-09-30 02:50:06.703767+00,2025-10-08 00:58:58.92196+00
+Moradia,BKUP (Internet),101.46,2025-11-10,true,2025-11-06,null,fixa,null,null,1,false,2025-11-06 12:11:42.991042+00,2025-11-06 23:36:48.073422+00
+Moradia,CAIXA (Casa),730.00,2025-12-06,true,2025-12-12,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2025-11-26 21:52:09.802342+00,2025-12-12 17:11:53.081865+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,2025-12-10,true,2025-12-12,Taxa Mensal,fixa,null,null,1,false,2025-11-26 21:52:09.870688+00,2025-12-12 17:15:30.865905+00
+Cartão de Credito,Cartão (Nubank - Ana),640.00,2025-12-25,true,2025-12-23,null,fixa,null,null,1,false,2025-11-26 21:52:09.887338+00,2025-12-23 16:03:51.032651+00
+Outros,Cartão (BMG - Herik),5.00,2025-12-05,true,2025-12-12,null,fixa,null,null,1,false,2025-11-26 21:52:09.899512+00,2025-12-12 17:03:11.101048+00
+Cartão de Credito,Cartão (Inter - Herik),1365.92,2025-10-10,true,2025-10-17,null,fixa,null,null,1,false,2025-10-08 01:27:25.265379+00,2025-10-17 12:33:13.28513+00
+Moradia,Energia elétrica (CELESC),231.00,2026-01-05,true,2026-01-07,Pagar pelo APP Celesc,fixa,null,null,1,false,2025-12-29 21:12:31.355285+00,2026-01-07 21:25:25.988285+00
+Outros,Cartão (Nubank - Herik),2000.00,2026-01-22,true,2026-02-04,null,fixa,null,null,1,false,2025-12-29 21:12:31.363246+00,2026-02-04 14:40:55.55173+00
+Moradia,TIM (Herik & Juliana),0.00,2026-01-05,true,2025-12-29,Pagar pelo APP TIM,fixa,null,null,1,false,2025-12-29 21:12:31.376086+00,2025-12-29 21:19:45.210089+00
+Moradia,TIM (Ana),47.00,2026-01-21,true,2026-01-30,null,fixa,null,null,1,false,2025-12-29 21:12:31.415721+00,2026-01-30 14:11:29.680665+00
+Moradia,CAIXA (Casa),750.00,2026-01-06,true,2026-01-07,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2025-12-29 21:12:31.425568+00,2026-01-07 21:24:42.882163+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,2026-01-10,true,2026-01-13,Taxa Mensal,fixa,null,null,1,false,2025-12-29 21:12:31.437621+00,2026-01-13 15:43:41.963969+00
+Cartão de Credito,Cartão (Havan - Herik),338.85,2026-01-26,true,2026-01-30,null,fixa,null,null,1,false,2025-12-29 21:12:31.440671+00,2026-01-30 14:02:41.980408+00
+Outros,Cartão (BMG - Herik),0.00,2026-01-05,true,2026-01-07,null,fixa,null,null,1,false,2025-12-29 21:12:31.446162+00,2026-01-07 21:32:55.683502+00
+Moradia,CAIXA (Casa),800.00,2026-02-06,true,2026-02-06,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2026-01-13 15:50:13.001505+00,2026-02-06 14:17:06.344255+00
+Cartão de Credito,Cartão (Havan - Herik),0.00,2026-02-26,true,2026-02-18,null,fixa,null,null,1,false,2026-01-13 15:50:13.017305+00,2026-02-18 06:51:00.679473+00
+Cartão de Credito,Cartão (Inter - Herik),1116.00,2026-02-10,true,2026-02-06,null,fixa,null,null,1,false,2026-01-13 15:50:13.065743+00,2026-02-06 14:43:18.083997+00
+Moradia,Agua (VISAN),67.00,2026-04-05,true,2026-04-12,Entrar no Site da VISAN,fixa,null,null,1,false,2026-03-28 04:29:50.010022+00,2026-04-12 16:25:22.970128+00
+Outros,Cartão (Nubank - Herik),0.00,2026-04-22,true,2026-05-13,null,fixa,null,null,1,false,2026-03-28 04:29:50.064418+00,2026-05-13 12:59:52.024181+00
+Outros,Cartão (Amazon - Herik),1770.00,2026-04-25,false,null,APP Bradesco,fixa,null,null,1,false,2026-03-28 04:29:50.082871+00,2026-03-28 04:40:16.362158+00
+Moradia,BKUP (Internet),109.90,2026-04-10,true,2026-04-12,null,fixa,null,null,1,false,2026-03-28 04:29:50.097668+00,2026-04-12 16:31:06.738507+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,2026-05-10,false,null,Taxa Mensal,fixa,null,null,1,false,2026-05-08 16:10:54.922155+00,2026-05-08 16:10:54.922155+00
+Transporte,Licenciamento Anual 2025,149.37,2025-12-30,true,2025-12-23,Linha Digitavel: 856000000013493700242503420173608761010000213511,variavel,null,null,null,false,2025-10-08 01:54:46.566424+00,2025-12-23 15:15:50.74961+00
+Transporte,Seguro Carro (Pioneira),85.27,1900-01-10,false,null,DDA Automatico,fixa,null,null,null,true,2025-11-06 23:37:45.488375+00,2025-11-06 23:37:45.488375+00
+Transporte,Seguro Carro (Pioneira),85.27,2025-12-10,true,2025-12-12,DDA Automatico,fixa,null,null,1,false,2025-11-26 21:52:09.816993+00,2025-12-12 17:15:27.181134+00
+Cartão de Credito,Cartão (Havan - Herik),418.00,2025-12-26,true,2025-12-23,null,fixa,null,null,1,false,2025-11-26 21:52:09.877352+00,2025-12-23 15:19:45.846081+00
+Moradia,TIM (Herik & Juliana),0.00,2025-12-05,true,2025-12-23,Pagar pelo APP TIM,fixa,null,null,1,false,2025-11-26 21:52:09.899591+00,2025-12-23 15:33:01.927368+00
+Moradia,TIM (Herik & Juliana),0.00,2026-04-05,true,2026-03-28,Pagar pelo APP TIM,fixa,null,null,1,false,2026-03-28 04:29:50.019308+00,2026-03-28 04:33:26.137228+00
+Moradia,Agua (VISAN),146.02,2026-01-05,true,2026-01-07,Entrar no Site da VISAN,fixa,null,null,1,false,2025-12-29 21:12:31.360173+00,2026-01-07 21:28:26.184084+00
+Transporte,Seguro Carro (Pioneira),85.27,2026-01-10,true,2026-01-07,DDA Automatico,fixa,null,null,1,false,2025-12-29 21:12:31.416794+00,2026-01-07 21:48:14.214737+00
+Cartão de Credito,Cartão (Santander - Ana),2.00,2026-01-10,true,2026-01-07,null,fixa,null,null,1,false,2025-12-29 21:12:31.43134+00,2026-01-07 21:46:43.455305+00
+Moradia,BKUP (Internet),116.01,2026-01-10,true,2026-01-07,null,fixa,null,null,1,false,2025-12-29 21:12:31.453941+00,2026-01-07 21:54:15.736289+00
+Moradia,TIM (Ana),47.00,2026-04-21,true,2026-05-08,null,fixa,null,null,1,false,2026-03-28 04:29:50.073451+00,2026-05-08 16:08:29.482598+00
+Cartão de Credito,Cartão Shoppe,126.00,2026-04-06,true,2026-04-12,SParcelado (Shoppe),fixa,null,null,1,false,2026-03-28 04:29:50.092963+00,2026-04-12 16:26:30.081893+00
+Moradia,TIM (Herik),158.00,2026-02-20,true,2026-02-18,Pagar pelo APP TIM,fixa,null,null,1,false,2026-01-13 15:50:13.004233+00,2026-02-18 06:49:46.147034+00
+Moradia,Agua (VISAN),95.50,2026-02-05,true,2026-02-06,Entrar no Site da VISAN,fixa,null,null,1,false,2026-01-13 15:50:13.016625+00,2026-02-06 14:36:42.80828+00
+Cartão de Credito,Cartão (Nubank - Ana),0.00,2026-02-25,true,2026-03-10,null,fixa,null,null,1,false,2026-01-13 15:50:13.059585+00,2026-03-10 12:22:29.305982+00
+Moradia,TIM (Herik),47.99,2026-05-20,false,null,Pagar APP TIM,fixa,null,null,1,false,2026-05-08 16:10:54.939615+00,2026-05-08 16:10:54.939615+00
+Outros,Cartão (Nubank - Herik),0.00,2026-02-22,true,2026-02-18,null,fixa,null,null,1,false,2026-01-13 15:50:13.010054+00,2026-02-18 06:49:49.752945+00
+Cartão de Credito,Cartão (Santander - Ana),0.00,2026-02-10,true,2026-03-10,null,fixa,null,null,1,false,2026-01-13 15:50:13.027798+00,2026-03-10 11:56:18.688842+00
+Cartão de Credito,Cartão Shoppe,87.00,2026-02-06,true,2026-02-06,SParcelado (Shoppe),fixa,null,null,1,false,2026-01-13 15:50:13.074126+00,2026-02-06 14:37:45.797092+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,1900-01-10,false,null,Taxa Mensal,fixa,null,null,null,true,2025-10-08 00:53:16.987533+00,2025-10-08 00:53:16.987533+00
+Transporte,Seguro Carro (Pioneira),85.27,2025-11-10,true,2025-11-06,DDA Automatico,fixa,null,null,1,false,2025-11-06 23:37:53.748038+00,2025-11-06 23:38:23.16169+00
+Cartão de Credito,Cartão (Inter - Herik),1221.00,2025-12-10,true,2025-12-12,null,fixa,null,null,1,false,2025-11-26 21:52:09.82314+00,2025-12-12 17:11:41.224955+00
+Outros,Cartão (Nubank - Herik),3841.40,2025-12-22,true,2025-12-23,null,fixa,null,null,1,false,2025-11-26 21:52:09.881058+00,2025-12-23 15:31:05.293978+00
+Moradia,Energia elétrica (CELESC),250.00,2025-12-05,true,2025-12-12,Pagar pelo APP Celesc,fixa,null,null,1,false,2025-11-26 21:52:09.892194+00,2025-12-12 17:07:14.952431+00
+Cartão de Credito,Cartão (Inter - Herik),1324.62,2026-01-10,true,2026-01-20,null,fixa,null,null,1,false,2025-12-29 21:12:31.396537+00,2026-01-20 16:21:41.811121+00
+Cartão de Credito,Cartão (Mercado Pago - Herik),115.79,2026-01-07,true,2026-01-07,APP Mercado Pago,fixa,null,null,1,false,2025-12-29 21:12:31.42803+00,2026-01-07 21:40:18.95142+00
+Cartão de Credito,Cartão (Nubank - Ana),400.00,2026-01-25,true,2026-01-30,null,fixa,null,null,1,false,2025-12-29 21:12:31.444195+00,2026-01-30 14:15:43.456084+00
+Outros,Cartão (BMG - Herik),8.00,2026-04-05,true,2026-04-12,null,fixa,null,null,1,false,2026-03-28 04:29:50.027658+00,2026-04-12 16:23:36.966597+00
+Cartão de Credito,Cartão (Inter - Herik),1475.00,2026-04-10,true,2026-04-12,null,fixa,null,null,1,false,2026-03-28 04:29:50.075697+00,2026-04-12 16:18:09.607888+00
+Transporte,Seguro Carro (Pioneira),85.27,2026-04-10,true,2026-04-12,DDA Automatico,fixa,null,null,1,false,2026-03-28 04:29:50.097091+00,2026-04-12 16:31:03.092362+00
+Outros,Cartão (Amazon - Herik),0.00,2026-05-25,false,null,APP Bradesco,fixa,null,null,1,false,2026-05-08 16:10:54.954151+00,2026-05-08 16:10:54.954151+00
+Cartão de Credito,Cartão (Santander - Ana),0.00,1900-01-10,false,null,null,fixa,null,null,null,true,2025-10-08 00:55:07.072013+00,2025-10-08 00:55:07.072013+00
+Cartão de Credito,Cartão (Inter - Herik),1281.00,2025-11-10,true,2025-11-06,null,fixa,null,null,1,false,2025-11-06 12:11:42.988503+00,2025-11-06 23:54:23.406088+00
+Moradia,TIM (Ana),47.00,2025-12-21,true,2025-12-23,null,fixa,null,null,1,false,2025-11-26 21:52:09.872164+00,2025-12-23 16:03:44.845598+00
+Moradia,Agua (VISAN),67.00,2025-12-05,true,2025-12-01,Entrar no Site da VISAN,fixa,null,null,1,false,2025-11-26 21:52:09.887686+00,2025-12-01 22:57:59.160547+00
+Cartão de Credito,Cartão (Santander - Ana),6.00,2025-12-10,true,2025-12-23,null,fixa,null,null,1,false,2025-11-26 21:52:09.901889+00,2025-12-23 16:03:53.6412+00
+Moradia,TIM (Herik),47.99,1900-01-20,false,null,Pagar APP TIM,fixa,null,null,null,true,2026-03-28 04:35:17.661166+00,2026-03-28 04:35:17.661166+00
+Outros,Cartão (Amazon - Herik),125.00,2026-01-25,true,2026-01-30,APP Bradesco,fixa,null,null,1,false,2025-12-29 21:12:31.354903+00,2026-01-30 14:04:47.253032+00
+Outros,Cartão (Amazon - Herik),122.00,2026-02-25,true,2026-02-11,APP Bradesco,fixa,null,null,1,false,2026-01-13 15:50:13.007739+00,2026-02-11 12:57:47.439419+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,2026-02-10,true,2026-02-06,Taxa Mensal,fixa,null,null,1,false,2026-01-13 15:50:13.029204+00,2026-02-06 14:41:31.905301+00
+Transporte,Seguro Carro (Pioneira),85.27,2026-02-10,true,2026-02-06,DDA Automatico,fixa,null,null,1,false,2026-01-13 15:50:13.069333+00,2026-02-06 14:43:58.826361+00
+Moradia,TIM (Herik & Juliana),158.00,2026-03-20,true,2026-03-28,Pagar pelo APP TIM,fixa,null,null,1,false,2026-03-10 11:56:11.288979+00,2026-03-28 04:27:11.435349+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,2026-03-10,true,2026-03-10,Taxa Mensal,fixa,null,null,1,false,2026-03-10 11:56:11.33549+00,2026-03-10 12:07:07.56855+00
+Cartão de Credito,Cartão (Nubank - Ana),0.00,2026-03-25,true,2026-04-12,null,fixa,null,null,1,false,2026-03-10 11:56:11.345965+00,2026-04-12 16:19:24.680242+00
+Moradia,BKUP (Internet),109.90,2026-03-10,true,2026-03-10,null,fixa,null,null,1,false,2026-03-10 11:56:11.375316+00,2026-03-10 12:08:39.616619+00
+Moradia,BKUP (Internet),109.90,2026-05-10,true,2026-05-13,null,fixa,null,null,1,false,2026-05-08 16:10:54.961837+00,2026-05-13 13:00:22.192256+00
+Cartão de Credito,Cartão (Nubank - Ana),0.00,1900-01-25,false,null,null,fixa,null,null,null,true,2025-10-08 00:57:12.559849+00,2025-10-08 00:57:12.559849+00
+Moradia,Taxa Cartão Magazine Luiza,22.98,2025-10-10,true,2025-10-08,Taxa Mensal,fixa,null,null,1,false,2025-10-08 00:57:23.370365+00,2025-10-08 01:34:49.590407+00
+Moradia,BKUP (Internet),109.90,2025-12-10,true,2025-12-12,null,fixa,null,null,1,false,2025-11-26 21:52:09.916148+00,2025-12-12 17:07:24.822312+00
+Cartão de Credito,Cartão Shoppe,0.00,1900-01-06,false,null,SParcelado (Shoppe),fixa,null,null,null,true,2026-01-07 20:54:16.616663+00,2026-01-07 20:54:16.616663+00
+Moradia,BKUP (Internet),109.90,2026-02-10,true,2026-02-06,null,fixa,null,null,1,false,2026-01-13 15:50:13.034766+00,2026-02-06 14:42:10.971094+00
+Moradia,CAIXA (Casa),695.00,2026-03-06,true,2026-03-10,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2026-03-10 11:56:11.291216+00,2026-03-10 12:01:41.742705+00
+Outros,Cartão (BMG - Herik),0.00,2026-03-05,true,2026-03-10,null,fixa,null,null,1,false,2026-03-10 11:56:11.343921+00,2026-03-10 12:09:17.683923+00
+Cartão de Credito,Cartão Shoppe,130.00,2026-03-06,true,2026-03-10,SParcelado (Shoppe),fixa,null,null,1,false,2026-03-10 11:56:11.377002+00,2026-03-10 12:00:11.497099+00
+Moradia,TIM (Herik),47.99,2026-03-20,true,2026-03-28,Pagar APP TIM,fixa,null,null,1,false,2026-03-28 04:35:22.142037+00,2026-03-28 04:35:39.403585+00
+Moradia,TIM (Herik),47.99,2026-04-20,true,2026-05-08,Pagar APP TIM,fixa,null,null,1,false,2026-03-28 04:35:41.486551+00,2026-05-08 16:09:37.119694+00
+Cartão de Credito,Cartão (Santander - Ana),0.00,2025-10-10,true,2025-10-08,null,fixa,null,null,1,false,2025-10-08 00:57:23.369769+00,2025-10-08 01:14:14.081902+00
+Transporte,Renovação CNH,180.00,2025-11-10,true,2026-02-18,Verificar para Fazer Sozinho(Sem auxilio Autoescola),variavel,null,null,null,false,2025-10-08 02:00:42.73994+00,2026-02-18 06:49:38.283885+00
+Cartão de Credito,Cartão (Nubank - Ana),573.92,2025-11-25,true,2025-12-01,null,fixa,null,null,1,false,2025-11-06 12:11:42.978379+00,2025-12-01 22:54:57.258382+00
+Outros,Cartão (Amazon - Herik),75.82,2025-12-25,true,2025-12-23,APP Bradesco,fixa,null,null,1,false,2025-11-26 21:52:09.797004+00,2025-12-23 15:17:36.376567+00
+Moradia,TIM (Ana),47.00,2026-02-21,true,2026-03-10,null,fixa,null,null,1,false,2026-01-13 15:50:13.049425+00,2026-03-10 12:22:18.318345+00
+Moradia,Agua (VISAN),67.00,2026-03-05,true,2026-03-10,Entrar no Site da VISAN,fixa,null,null,1,false,2026-03-10 11:56:11.314815+00,2026-03-10 12:18:31.76844+00
+Transporte,Seguro Carro (Pioneira),85.27,2026-03-10,true,2026-03-10,DDA Automatico,fixa,null,null,1,false,2026-03-10 11:56:11.345523+00,2026-03-10 12:08:00.519097+00
+Outros,Cartão (Amazon - Herik),0.00,2026-03-25,true,2026-03-10,APP Bradesco,fixa,null,null,1,false,2026-03-10 11:56:11.37732+00,2026-03-10 12:20:38.035453+00
+Cartão de Credito,Cartão (Nubank - Ana),0.00,2026-05-25,false,null,null,fixa,null,null,1,false,2026-05-08 16:10:54.677842+00,2026-05-08 16:10:54.677842+00
+Moradia,Agua (VISAN),67.00,2026-05-05,true,2026-05-13,Entrar no Site da VISAN,fixa,null,null,1,false,2026-05-08 16:10:54.780697+00,2026-05-13 13:00:06.020392+00
+Outros,Cartão (Nubank - Herik),0.00,2026-05-22,false,null,null,fixa,null,null,1,false,2026-05-08 16:10:54.914602+00,2026-05-08 16:10:54.914602+00
+Cartão de Credito,Cartão (Nubank - Ana),558.01,2025-10-25,true,2025-10-31,null,fixa,null,null,1,false,2025-10-08 00:57:23.378883+00,2025-10-31 21:22:33.792683+00
+Outros,Cartão (Nubank - Herik),1390.00,2026-03-22,true,2026-04-12,null,fixa,null,null,1,false,2026-03-10 11:56:11.343066+00,2026-04-12 16:19:11.815333+00
+Cartão de Credito,Cartão (Santander - Ana),0.00,2026-03-10,true,2026-03-28,null,fixa,null,null,1,false,2026-03-10 11:56:11.377223+00,2026-03-28 04:27:00.357266+00
+Moradia,TIM (Ana),47.00,2026-05-21,false,null,null,fixa,null,null,1,false,2026-05-08 16:10:54.690673+00,2026-05-08 16:10:54.690673+00
+Cartão de Credito,Cartão Shoppe,0.00,2026-05-06,true,2026-05-13,SParcelado (Shoppe),fixa,null,null,1,false,2026-05-08 16:10:54.789473+00,2026-05-13 13:00:08.300162+00
+Cartão de Credito,Cartão (Inter - Herik),0.00,1900-01-10,false,null,null,fixa,null,null,null,true,2025-10-08 01:23:38.280852+00,2025-10-08 01:28:55.261609+00
+Cartão de Credito,Cartão (Havan - Herik),542.91,2026-03-26,true,2026-03-10,null,fixa,null,null,1,false,2026-03-10 11:56:11.363853+00,2026-03-10 12:21:37.450905+00
+Cartão de Credito,Cartão (Mercado Pago - Herik),160.00,2026-03-07,true,2026-03-10,APP Mercado Pago,fixa,null,null,1,false,2026-03-10 11:56:11.377079+00,2026-03-10 12:02:55.894337+00
+Cartão de Credito,Cartão (Inter - Herik),1110.00,2026-03-10,true,2026-03-10,null,fixa,null,null,1,false,2026-03-10 11:56:11.386835+00,2026-03-10 12:04:54.817892+00
+Moradia,Energia elétrica (CELESC),120.00,2026-05-05,true,2026-05-13,Pagar pelo APP Celesc,fixa,null,null,1,false,2026-05-08 16:10:54.696036+00,2026-05-13 13:00:01.84926+00
+Outros,Cartão (BMG - Herik),0.00,2026-05-05,true,2026-05-13,null,fixa,null,null,1,false,2026-05-08 16:10:54.787356+00,2026-05-13 13:00:00.255811+00
+Moradia,BKUP (Internet),109.90,1900-01-10,false,null,null,fixa,null,null,null,true,2025-10-08 01:25:05.894934+00,2025-11-06 23:38:55.006953+00
+Moradia,CAIXA (Casa),710.00,2025-11-06,true,2025-11-06,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2025-11-06 12:11:42.823861+00,2025-11-06 23:32:05.264142+00
+Moradia,Energia elétrica (CELESC),168.21,2025-11-05,true,2025-11-26,Pagar pelo APP Celesc,fixa,null,null,1,false,2025-11-06 12:11:42.866859+00,2025-11-26 21:47:02.372572+00
+Outros,Cartão (BMG - Herik),150.00,2025-11-05,true,2025-11-06,null,fixa,null,null,1,false,2025-11-06 12:11:42.90825+00,2025-11-06 12:11:59.925008+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,2025-11-10,true,2025-11-06,Taxa Mensal,fixa,null,null,1,false,2025-11-06 12:11:42.949032+00,2025-11-06 23:45:44.105053+00
+Moradia,TIM (Ana),47.00,2026-03-21,true,2026-04-12,null,fixa,null,null,1,false,2026-03-10 11:56:11.366181+00,2026-04-12 16:19:06.552805+00
+Moradia,Energia elétrica (CELESC),120.00,2026-03-05,true,2026-03-10,Pagar pelo APP Celesc,fixa,null,null,1,false,2026-03-10 11:56:11.377654+00,2026-03-10 11:57:50.175682+00
+Cartão de Credito,Cartão (Inter - Herik),0.00,2026-05-10,false,null,null,fixa,null,null,1,false,2026-05-08 16:10:54.699259+00,2026-05-08 16:10:54.699259+00
+Cartão de Credito,Cartão (Santander - Ana),0.00,2026-05-10,false,null,null,fixa,null,null,1,false,2026-05-08 16:10:54.829728+00,2026-05-08 16:10:54.829728+00
+Transporte,Seguro Carro (Pioneira),85.27,2026-05-10,true,2026-05-13,DDA Automatico,fixa,null,null,1,false,2026-05-08 16:10:54.948001+00,2026-05-13 13:00:25.420761+00
+Moradia,TIM (Ana),47.00,1900-01-21,false,null,null,fixa,null,null,null,true,2025-10-08 01:26:16.475704+00,2025-10-08 01:26:16.475704+00
+Moradia,Agua (VISAN),73.01,2025-11-05,true,2025-11-06,Entrar no Site da VISAN,fixa,null,null,1,false,2025-11-06 12:11:42.852328+00,2025-11-06 23:30:26.634689+00
+Outros,Cartão (Nubank - Herik),2543.91,2025-11-22,true,2025-11-26,null,fixa,null,null,1,false,2025-11-06 12:11:42.895979+00,2025-11-26 21:44:15.495016+00
+Moradia,TIM (Ana),47.00,2025-11-21,true,2025-11-26,null,fixa,null,null,1,false,2025-11-06 12:11:42.932177+00,2025-11-26 21:51:24.635186+00
+Cartão de Credito,Cartão (Havan - Herik),247.15,2025-11-26,true,2025-12-01,null,fixa,null,null,1,false,2025-11-06 12:11:42.946929+00,2025-12-01 22:57:06.482556+00
+Moradia,CAIXA (Casa),695.00,2026-05-06,false,null,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2026-05-08 16:10:54.709306+00,2026-05-08 16:10:54.709306+00
+Cartão de Credito,Cartão (Mercado Pago - Herik),0.00,2026-05-07,false,null,APP Mercado Pago,fixa,null,null,1,false,2026-05-08 16:10:54.852166+00,2026-05-08 16:10:54.852166+00
+Moradia,CAIXA (Casa),300.00,2026-04-06,true,2026-04-17,Transferir dinheiro para Conta CAIXA,fixa,null,null,1,false,2026-03-28 04:29:50.003056+00,2026-04-17 14:36:52.445127+00
+Moradia,Energia elétrica (CELESC),272.00,2026-04-05,true,2026-04-12,Pagar pelo APP Celesc,fixa,null,null,1,false,2026-03-28 04:29:50.059336+00,2026-04-12 16:21:05.343513+00
+Cartão de Credito,Cartão (Mercado Pago - Herik),223.00,2026-04-07,true,2026-04-12,APP Mercado Pago,fixa,null,null,1,false,2026-03-28 04:29:50.076569+00,2026-04-12 16:27:24.028954+00
+Cartão de Credito,Cartão (Havan - Herik),604.00,2026-04-26,true,2026-05-08,null,fixa,null,null,1,false,2026-03-28 04:29:50.104198+00,2026-05-08 16:08:17.75634+00
+Cartão de Credito,Cartão (Havan - Herik),0.00,2026-05-26,false,null,null,fixa,null,null,1,false,2026-05-08 16:10:54.940329+00,2026-05-08 16:10:54.940329+00
+Cartão de Credito,Cartão (Havan - Herik),0.00,1900-01-26,false,null,null,fixa,null,null,null,true,2025-10-08 01:27:18.368541+00,2025-10-08 01:27:18.368541+00
+Moradia,BKUP (Internet),98.90,2025-10-10,true,2025-10-08,null,fixa,null,null,1,false,2025-10-08 01:27:25.237445+00,2025-10-08 01:30:32.997535+00
+Moradia,TIM (Herik & Juliana),0.00,2025-11-05,true,2025-11-06,Pagar pelo APP TIM,fixa,null,null,1,false,2025-11-06 12:11:42.866844+00,2025-11-06 23:32:15.526688+00
+Cartão de Credito,Cartão (Santander - Ana),100.00,2025-11-10,true,2025-12-01,null,fixa,null,null,1,false,2025-11-06 12:11:42.91438+00,2025-12-01 22:57:19.517669+00
+Outros,Cartão (Amazon - Herik),668.47,2025-11-25,true,2025-12-01,APP Bradesco,fixa,null,null,1,false,2025-11-06 12:11:42.945811+00,2025-12-01 22:54:44.872652+00
+Cartão de Credito,Cartão (Mercado Pago - Herik),0.00,1900-01-07,false,null,APP Mercado Pago,fixa,null,null,null,true,2025-12-23 19:22:28.606056+00,2025-12-23 19:22:28.606056+00
+Moradia,Energia elétrica (CELESC),301.00,2026-02-05,true,2026-02-06,Pagar pelo APP Celesc,fixa,null,null,1,false,2026-01-13 15:50:13.001362+00,2026-02-06 14:17:55.899102+00
+Outros,Cartão (BMG - Herik),0.00,2026-02-05,true,2026-02-06,null,fixa,null,null,1,false,2026-01-13 15:50:13.01865+00,2026-02-06 14:38:20.137653+00
+Cartão de Credito,Cartão (Mercado Pago - Herik),1053.00,2026-02-07,true,2026-02-06,APP Mercado Pago,fixa,null,null,1,false,2026-01-13 15:50:13.06513+00,2026-02-06 14:40:08.473079+00
+Cartão de Credito,Cartão (Nubank - Ana),300.00,2026-04-25,true,2026-05-13,null,fixa,null,null,1,false,2026-03-28 04:29:50.016671+00,2026-05-13 12:59:51.092959+00
+Moradia,Taxa Cartão Magazine Luiza,15.00,2026-04-10,true,2026-05-03,Taxa Mensal,fixa,null,null,1,false,2026-03-28 04:29:50.061111+00,2026-05-03 16:43:43.221114+00
+Cartão de Credito,Cartão (Santander - Ana),0.00,2026-04-10,true,2026-03-28,null,fixa,null,null,1,false,2026-03-28 04:29:50.082466+00,2026-03-28 04:38:07.543511+00
