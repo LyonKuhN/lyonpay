@@ -703,6 +703,7 @@ export default function Despesas() {
                                   observacoes: item.observacoes || '',
                                   categoria: item.categoria || 'Outros',
                                   usa_media: item.usa_media || false,
+                                  datas_personalizadas: [] as string[],
                                 });
                                 
                                if (item._isGroup && item._items) {
