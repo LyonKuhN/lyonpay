@@ -15,6 +15,10 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   });
 
   if (!response.ok) {
+    // Detect session expiration and notify the app
+    if (response.status === 401 || response.status === 403) {
+      window.dispatchEvent(new CustomEvent('session-expired'));
+    }
     let errorMsg = response.statusText;
     try {
       const errorData = await response.json();

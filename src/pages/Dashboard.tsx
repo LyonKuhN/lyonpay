@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, TrendingUp, TrendingDown, Clock, Loader2, Search, X, Calendar, ArrowRight, Tag, AlertCircle, CheckCircle2, BarChart3, Zap } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Clock, Loader2, Search, X, Calendar, ArrowRight, Tag, AlertCircle, CheckCircle2, BarChart3, Zap, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../services/api';
@@ -16,17 +16,20 @@ const formatDate = (dateStr: string) => {
 export default function Dashboard() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const month = selectedMonth;
+  const year = selectedYear;
 
   const { data: receitasRaw = [], isLoading: loadRec } = useQuery({ queryKey: ['receitas'], queryFn: () => apiFetch('/api/receitas'), enabled: !!token });
   const { data: despesasRaw = [], isLoading: loadDes } = useQuery({ queryKey: ['despesas', year, month], queryFn: () => apiFetch(`/api/despesas?month=${month}&year=${year}`), enabled: !!token });
   const { data: atrasadasRaw = [], isLoading: loadAtr } = useQuery({ queryKey: ['despesas', 'atrasadas'], queryFn: () => apiFetch('/api/despesas/atrasadas'), enabled: !!token });
   const { data: lembretesRaw = [], isLoading: loadLem } = useQuery({ queryKey: ['lembretes'], queryFn: () => apiFetch('/api/lembretes'), enabled: !!token });
-  const { data: evolucao = { receitas: [], despesas: [] }, isLoading: loadEvo } = useQuery({ queryKey: ['dashboard', 'evolucao'], queryFn: () => apiFetch('/api/dashboard/evolucao'), enabled: !!token });
+  const { data: evolucao = { receitas: [], despesas: [] }, isLoading: loadEvo } = useQuery({ queryKey: ['dashboard', 'evolucao', year], queryFn: () => apiFetch(`/api/dashboard/evolucao?year=${year}`), enabled: !!token });
+  const { data: saldoData = { saldoGlobal: 0 }, isLoading: loadSaldo } = useQuery({ queryKey: ['dashboard', 'saldo'], queryFn: () => apiFetch('/api/dashboard/saldo'), enabled: !!token });
 
-  const loading = loadRec || loadDes || loadAtr || loadLem || loadEvo;
+  const loading = loadRec || loadDes || loadAtr || loadLem || loadEvo || loadSaldo;
 
   const atrasadas = Array.isArray(atrasadasRaw) ? atrasadasRaw : [];
   const lembretes = Array.isArray(lembretesRaw) ? lembretesRaw.filter(r => !r.concluido).slice(0, 3) : [];
@@ -35,7 +38,13 @@ export default function Dashboard() {
     const receitas = Array.isArray(receitasRaw) ? receitasRaw : [];
     const despesas = Array.isArray(despesasRaw) ? despesasRaw : [];
 
-    const totalRec = receitas.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0);
+    const receitasFiltradas = receitas.filter((r: any) => {
+      const d = r.data_recebimento ? new Date(r.data_recebimento) : new Date();
+      if (month === 0) return d.getFullYear() === year;
+      return d.getMonth() + 1 === month && d.getFullYear() === year;
+    });
+
+    const totalRec = receitasFiltradas.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0);
     const totalDes = despesas.filter((d: any) => d.pago).reduce((acc: number, curr: any) => acc + Number(curr.valor), 0);
     const totalPend = despesas.filter((d: any) => !d.pago).reduce((acc: number, curr: any) => acc + Number(curr.valor), 0);
 
@@ -46,16 +55,26 @@ export default function Dashboard() {
     });
     const categorias = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
-    const daysInMonth = new Date(year, month, 0).getDate();
     const chartMap: Record<string, any> = {};
-    for (let i = 1; i <= daysInMonth; i++) {
-      const dayStr = i.toString().padStart(2, '0');
-      chartMap[dayStr] = { name: dayStr, Entradas: 0, Saidas: 0 };
+    if (month === 0) {
+      for (let i = 1; i <= 12; i++) {
+        const mStr = i.toString().padStart(2, '0');
+        chartMap[mStr] = { name: mStr, Entradas: 0, Saidas: 0 };
+      }
+    } else {
+      const daysInMonth = new Date(year, month, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dayStr = i.toString().padStart(2, '0');
+        chartMap[dayStr] = { name: dayStr, Entradas: 0, Saidas: 0 };
+      }
     }
 
-    receitas.forEach((r: any) => {
+    receitasFiltradas.forEach((r: any) => {
       const d = r.data_recebimento ? new Date(r.data_recebimento) : new Date();
-      if (d.getMonth() + 1 === month && d.getFullYear() === year) {
+      if (month === 0) {
+        const mStr = (d.getMonth() + 1).toString().padStart(2, '0');
+        if (chartMap[mStr]) chartMap[mStr].Entradas += Number(r.valor);
+      } else {
         const dayStr = d.getDate().toString().padStart(2, '0');
         if (chartMap[dayStr]) chartMap[dayStr].Entradas += Number(r.valor);
       }
@@ -63,19 +82,22 @@ export default function Dashboard() {
 
     despesas.filter((d:any) => d.pago).forEach((d: any) => {
       const dt = d.data_vencimento ? new Date(d.data_vencimento) : new Date();
-      if (dt.getMonth() + 1 === month && dt.getFullYear() === year) {
+      if (month === 0) {
+        const mStr = (dt.getMonth() + 1).toString().padStart(2, '0');
+        if (chartMap[mStr]) chartMap[mStr].Saidas += Number(d.valor);
+      } else {
         const dayStr = dt.getDate().toString().padStart(2, '0');
         if (chartMap[dayStr]) chartMap[dayStr].Saidas += Number(d.valor);
       }
     });
 
     return {
-      receitas: receitas.slice(0, 5),
+      receitas: receitasFiltradas.sort((a: any, b: any) => new Date(b.data_recebimento).getTime() - new Date(a.data_recebimento).getTime()).slice(0, 5),
       despesas: despesas.filter((d: any) => !d.pago).sort((a: any, b: any) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime()).slice(0, 5),
       totalReceitas: totalRec,
       totalDespesas: totalDes,
       totalPendente: totalPend,
-      saldo: totalRec - totalDes,
+      saldo: saldoData.saldoGlobal,
       categorias,
       chartData: Object.values(chartMap),
       pieData: categorias.map(([name, value]) => ({ name, value }))
@@ -156,7 +178,7 @@ export default function Dashboard() {
   const spendingRate = data.totalReceitas > 0 ? Math.min(100, (data.totalDespesas / data.totalReceitas) * 100) : 0;
   const healthScore = Math.min(100, Math.round(savingsRate * 0.6 + (atrasadas.length === 0 ? 40 : Math.max(0, 40 - atrasadas.length * 10))));
   const healthColor = healthScore >= 70 ? '#a3ff12' : healthScore >= 40 ? '#FFD700' : '#FF4D4D';
-  const monthName = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const monthName = month === 0 ? 'Ano Todo' : new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-24 px-4 md:px-6">
@@ -172,6 +194,58 @@ export default function Dashboard() {
             <p className="text-zinc-500 text-[9px] md:text-[10px] font-black uppercase tracking-widest capitalize">{monthName}</p>
           </div>
         </div>
+        
+        {/* Filtros em linha */}
+        <div className="relative z-50">
+          <button 
+            onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+            className="flex items-center gap-2 bg-[#15151A] border border-white/5 hover:border-[#a3ff12]/50 px-4 py-2.5 rounded-2xl transition-all shadow-lg"
+          >
+            <Calendar size={16} className="text-[#a3ff12]" />
+            <span className="text-white font-black text-xs uppercase tracking-widest">
+              {month === 0 ? `Ano Todo de ${year}` : `${monthName.split(' ')[0]} ${year}`}
+            </span>
+            <ChevronDown size={14} className={`text-zinc-500 transition-transform ${isCalendarOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isCalendarOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setIsCalendarOpen(false)} />
+              <div className="absolute top-full md:right-0 left-0 md:left-auto mt-3 w-72 bg-[#15151A] border border-white/10 rounded-3xl shadow-2xl p-5 z-50 animate-in slide-in-from-top-2 fade-in duration-200">
+                
+                {/* Year Header */}
+                <div className="flex items-center justify-between mb-6 bg-white/5 rounded-2xl p-2 border border-white/5">
+                  <button onClick={() => setSelectedYear(y => y - 1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-all"><ChevronLeft size={16}/></button>
+                  <span className="font-black text-white text-sm">{year}</span>
+                  <button onClick={() => setSelectedYear(y => y + 1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-all"><ChevronRight size={16}/></button>
+                </div>
+
+                {/* Ano Todo Button */}
+                <button 
+                  onClick={() => { setSelectedMonth(0); setIsCalendarOpen(false); }}
+                  className={`w-full mb-4 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${month === 0 ? 'bg-[#a3ff12] text-black shadow-[0_0_20px_rgba(163,255,18,0.2)]' : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 border border-white/5'}`}
+                >
+                  Visão do Ano Todo
+                </button>
+
+                {/* Months Grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <button 
+                      key={m}
+                      onClick={() => { setSelectedMonth(m); setIsCalendarOpen(false); }}
+                      className={`py-2 rounded-xl font-bold text-xs transition-all ${month === m ? 'bg-[#a3ff12] text-black shadow-[0_0_15px_rgba(163,255,18,0.2)]' : 'bg-transparent text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                      {new Date(2000, m - 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="relative flex-1 max-w-md w-full">
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
             <Search className="text-zinc-500 w-4 h-4" />
@@ -282,7 +356,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-xl font-black text-white">Evolução ao Longo dos Meses</h3>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Últimos 6 meses</p>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Ano de {year}</p>
             </div>
             <div className="flex gap-4">
               <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-[#a3ff12]" /><span className="text-[10px] font-bold text-zinc-400 uppercase">Receitas</span></div>
@@ -310,7 +384,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-xl font-black text-white">Fluxo de Caixa</h3>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Evolução Diária ({monthName})</p>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{month === 0 ? `Evolução Mensal (${year})` : `Evolução Diária (${monthName})`}</p>
             </div>
             <div className="flex gap-4">
               <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#a3ff12]" /><span className="text-[10px] font-bold text-zinc-400 uppercase">Entradas</span></div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import { ArrowRight, Zap, Loader2, Mail, LayoutDashboard, CreditCard, Check, Star, Shield, TrendingUp, Clock, BarChart3, Users } from 'lucide-react';
@@ -816,6 +816,15 @@ export default function Landing() {
                 <button onClick={() => { setIsAuthModalOpen(isAuthModalOpen === 'login' ? 'register' : 'login'); setError(''); setSuccessMessage(''); }} className="w-full mt-6 text-sm text-[#888888] hover:text-[#FCFCFC] transition-colors">
                   {isAuthModalOpen === 'login' ? 'Não tem conta? Cadastre-se grátis' : 'Já tem conta? Entrar'}
                 </button>
+                {isAuthModalOpen === 'register' && (
+                  <p className="text-[10px] text-center text-zinc-500 mt-4 leading-relaxed font-semibold">
+                    Ao criar uma conta, você concorda com nossa{' '}
+                    <Link to="/politica-de-privacidade" onClick={() => setIsAuthModalOpen(null)} className="text-[#D7FF67] hover:underline">
+                      Política de Privacidade
+                    </Link>{' '}
+                    e Termos de Uso.
+                  </p>
+                )}
               </>
             )}
           </>

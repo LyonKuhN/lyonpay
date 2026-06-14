@@ -21,7 +21,7 @@ export default function Despesas() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'todas' | 'modelos'>('todas');
+  const [viewMode, setViewMode] = useState<'todas' | 'agrupado' | 'modelos'>('todas');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Filtros
@@ -37,6 +37,8 @@ export default function Despesas() {
   const [parcelInputMode, setParcelInputMode] = useState<'parcela' | 'total'>('parcela');
   const [rawAmount, setRawAmount] = useState('');
   const [editItem, setEditItem] = useState<any>(null);
+  const [customDates, setCustomDates] = useState<string[]>([]);
+  const [useCustomDates, setUseCustomDates] = useState(false);
 
   const emptyForm = {
     descricao: '', valor: '',
@@ -47,6 +49,7 @@ export default function Despesas() {
     observacoes: '',
     categoria: 'Outros',
     usa_media: false,
+    datas_personalizadas: [] as string[],
   };
   const [form, setForm] = useState(emptyForm);
   const [newCat, setNewCat] = useState({ nome: '', cor: '#a3ff12' });
@@ -94,6 +97,8 @@ export default function Despesas() {
       setForm(emptyForm);
       setRawAmount('');
       setEditItem(null);
+      setCustomDates([]);
+      setUseCustomDates(false);
     }
   });
 
@@ -130,10 +135,14 @@ export default function Despesas() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = { ...form };
+    if (useCustomDates && customDates.length > 0) {
+      (payload as any).datas_personalizadas = customDates;
+    }
     if (editItem) {
-      updateDespesa.mutate(form);
+      updateDespesa.mutate(payload);
     } else {
-      createDespesa.mutate(form);
+      createDespesa.mutate(payload);
     }
   };
 
@@ -176,7 +185,7 @@ export default function Despesas() {
     }
   }
   const despesasAgrupadas = Object.values(grouped);
-  let baseList = viewMode === 'todas' ? despesasAgrupadas : modelos;
+  let baseList = viewMode !== 'modelos' ? despesasAgrupadas : modelos;
 
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -220,7 +229,7 @@ export default function Despesas() {
   let otherExpenses: any[] = [];
   const byYearMonth: Record<string, Record<string, any[]>> = {};
 
-  if (viewMode === 'todas') {
+  if (viewMode === 'todas' || viewMode === 'agrupado') {
     groupedInstallments = displayList.filter(d => d._isGroup);
     otherExpenses = displayList.filter(d => !d._isGroup);
 
@@ -244,21 +253,55 @@ export default function Despesas() {
       {/* Header */}
       <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8">
         <div className="text-left">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 mb-3 md:mb-4">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-white">Despesas</h1>
-          </div>
-          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-            <button onClick={() => setViewMode('todas')} className={`whitespace-nowrap text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full transition-all ${viewMode === 'todas' ? 'bg-[#a3ff12] text-black shadow-[0_0_15px_rgba(163,255,18,0.3)]' : 'text-zinc-500 bg-white/5 hover:text-white'}`}>Lançamentos</button>
-            <button onClick={() => setViewMode('modelos')} className={`whitespace-nowrap text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full transition-all ${viewMode === 'modelos' ? 'bg-[#FFD700] text-black shadow-[0_0_15px_rgba(255,215,0,0.3)]' : 'text-zinc-500 bg-white/5 hover:text-white'}`}>Modelos Fixos</button>
-          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-white">
+            {viewMode === 'modelos' ? 'Modelos Fixos' : 'Despesas'}
+          </h1>
+          <p className="text-zinc-500 text-xs md:text-sm mt-1 font-bold uppercase tracking-wider">
+            {viewMode === 'modelos' 
+              ? 'Modelos recorrentes de gastos mensais' 
+              : 'Monitore e gerencie seus pagamentos'
+            }
+          </p>
         </div>
-        <button onClick={() => { setForm(emptyForm); setRawAmount(''); setEditItem(null); setIsModalOpen(true); }} className="w-full md:w-auto flex items-center justify-center gap-3 px-6 md:px-8 py-4 md:py-5 bg-[#a3ff12] text-black font-black rounded-2xl md:rounded-[1.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl">
-          <Plus className="w-5 h-5 md:w-6 md:h-6" strokeWidth={3}/> NOVO LANÇAMENTO
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          {viewMode === 'modelos' ? (
+            <button 
+              type="button"
+              onClick={() => setViewMode('todas')}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-4 bg-white/5 text-zinc-300 border border-white/10 hover:text-white hover:border-white/20 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest active:scale-95"
+            >
+              ← Voltar para Despesas
+            </button>
+          ) : (
+            <button 
+              type="button"
+              onClick={() => setViewMode('modelos')}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-4 bg-[#FFD700]/10 hover:bg-[#FFD700]/20 text-[#FFD700] border border-[#FFD700]/20 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest active:scale-95 group"
+            >
+              <Bookmark className="w-4 h-4 transition-transform group-hover:scale-110 text-[#FFD700]" />
+              Modelos Fixos
+            </button>
+          )}
+          <button 
+            type="button"
+            onClick={() => { 
+              setForm(viewMode === 'modelos' ? { ...emptyForm, tipo: 'fixa' } : emptyForm); 
+              setRawAmount(''); 
+              setEditItem(null); 
+              setCustomDates([]);
+              setUseCustomDates(false);
+              setIsModalOpen(true); 
+            }} 
+            className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 md:px-8 py-4 md:py-5 bg-[#a3ff12] text-black font-black rounded-2xl md:rounded-[1.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-2xl text-[10px] tracking-widest uppercase"
+          >
+            <Plus className="w-5 h-5 md:w-6 md:h-6" strokeWidth={3}/> 
+            {viewMode === 'modelos' ? 'Novo Modelo' : 'Novo Lançamento'}
+          </button>
+        </div>
       </header>
 
       {/* ── Analytics Section ── */}
-      {viewMode === 'todas' && !loading && despesas.length > 0 && (() => {
+      {(viewMode === 'todas' || viewMode === 'agrupado') && !loading && despesas.length > 0 && (() => {
         // Cálculos analíticos
         const fixas   = despesas.filter((d: any) => d.tipo === 'fixa' || d.tipo === 'fixo');
         const parcela = despesas.filter((d: any) => d.tipo === 'parcelada' || d.tipo === 'parcelado');
@@ -424,9 +467,18 @@ export default function Despesas() {
       })()}
 
       {viewMode === 'modelos' && (
-        <div className="mb-8 p-5 bg-[#FFD700]/10 border border-[#FFD700]/20 rounded-2xl flex items-center gap-3">
-          <Bookmark size={16} className="text-[#FFD700] shrink-0"/>
-          <p className="text-[#FFD700] text-[10px] font-black uppercase tracking-widest">Modelos de despesas fixas — usados para gerar automaticamente os gastos de cada mês.</p>
+        <div className="mb-8 p-6 bg-gradient-to-r from-[#FFD700]/10 to-transparent border border-[#FFD700]/20 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/15 flex items-center justify-center shrink-0">
+              <Bookmark className="w-6 h-6 text-[#FFD700]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">Modelos de Despesas Fixas</h3>
+              <p className="text-xs text-zinc-400 mt-1 max-w-xl font-bold">
+                Esses lançamentos funcionam como modelos (gabaritos). Eles são replicados automaticamente no início de cada mês na tela de pagamentos, evitando que você precise cadastrar as mesmas contas todo mês.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -508,6 +560,46 @@ export default function Despesas() {
         </div>
       </div>
 
+      {/* Visualização e Título da Listagem */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-lg md:text-xl font-black text-white tracking-tight uppercase">
+            {viewMode === 'todas' ? 'Lista Contínua' : viewMode === 'agrupado' ? 'Despesas por Mês/Ano' : 'Modelos Ativos'}
+          </h2>
+          <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-0.5">
+            {viewMode === 'todas' ? 'Todos os lançamentos em ordem cronológica' : viewMode === 'agrupado' ? 'Gastos organizados por ano e mês' : 'Modelos de despesas fixas cadastrados'}
+          </p>
+        </div>
+        {viewMode !== 'modelos' && (
+          <div className="flex bg-[#15151A] border border-white/5 rounded-2xl p-1 gap-1 self-start sm:self-center shrink-0">
+            <button 
+              type="button"
+              onClick={() => setViewMode('todas')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 ${
+                viewMode === 'todas' 
+                  ? 'bg-[#a3ff12] text-black shadow-lg shadow-[#a3ff12]/20 font-black' 
+                  : 'text-zinc-500 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Layers size={12} />
+              Lista Contínua
+            </button>
+            <button 
+              type="button"
+              onClick={() => setViewMode('agrupado')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 ${
+                viewMode === 'agrupado' 
+                  ? 'bg-[#a3ff12] text-black shadow-lg shadow-[#a3ff12]/20 font-black' 
+                  : 'text-zinc-500 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Calendar size={12} />
+              Mês e Ano
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* List */}
       <div className="space-y-6">
         {(() => {
@@ -540,6 +632,7 @@ export default function Despesas() {
 
             return (
               <div key={mapKey}>
+
                 <div className="relative">
                   {item._isGroup && !isExpanded && (
                     <>
@@ -595,19 +688,34 @@ export default function Despesas() {
                               onClick={(e) => { 
                                 e.stopPropagation(); 
                                 setEditItem(item);
+                                const normalizedTipo = 
+                                 item.tipo === 'parcelado' ? 'parcelada' :
+                                 item.tipo === 'fixo' ? 'fixa' :
+                                 item.tipo === 'variável' ? 'variavel' :
+                                 item.tipo;
                                 setForm({
                                   descricao: item.descricao,
                                   valor: item.valor,
                                   data_vencimento: item.data_vencimento ? item.data_vencimento.split('T')[0] : '',
-                                  tipo: item.tipo,
+                                  tipo: normalizedTipo,
                                   numero_parcelas: item.numero_parcelas || '2',
                                   valor_total: item.valor_total || '',
                                   observacoes: item.observacoes || '',
                                   categoria: item.categoria || 'Outros',
                                   usa_media: item.usa_media || false,
                                 });
-                                setRawAmount(item.valor.toString());
-                                setIsModalOpen(true);
+                                
+                               if (item._isGroup && item._items) {
+                                 const sortedItems = [...item._items].sort((a: any, b: any) => a.parcela_atual - b.parcela_atual);
+                                 setCustomDates(sortedItems.map((p: any) => p.data_vencimento ? p.data_vencimento.split('T')[0] : ''));
+                                 setUseCustomDates(true);
+                               } else {
+                                 setCustomDates([]);
+                                 setUseCustomDates(false);
+                               }
+
+                               setRawAmount(item.valor.toString());
+                               setIsModalOpen(true);
                               }}
                               className="p-1.5 text-zinc-600 hover:text-white transition-all bg-white/5 rounded-lg"
                               title="Editar"
@@ -715,6 +823,20 @@ export default function Despesas() {
 
           if (viewMode === 'modelos') return displayList.map(item => renderCard(item));
 
+          if (viewMode === 'todas') {
+            const flatList = [...groupedInstallments, ...displayList.filter(d => !d._isGroup)]
+              .sort((a: any, b: any) => {
+                const da = a.data_vencimento || '';
+                const db = b.data_vencimento || '';
+                return db.localeCompare(da);
+              });
+            return (
+              <div className="space-y-4">
+                {flatList.map(item => renderCard(item))}
+              </div>
+            );
+          }
+
           return (
             <div className="space-y-6">
               {groupedInstallments.length > 0 && (
@@ -784,18 +906,19 @@ export default function Despesas() {
             <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter mb-6">{editItem ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/* Tipo */}
-            <div>
-              <label className={LC}>Tipo de Despesa</label>
-              <div className="grid grid-cols-3 gap-2 mt-1.5">
-                {(['variavel', 'fixa', 'parcelada'] as const).map(t => (
-                  <button key={t} type="button" onClick={() => setForm({ ...form, tipo: t })}
-                    className={`py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${form.tipo === t ? 'bg-[#a3ff12] text-black shadow-lg' : 'bg-white/5 text-zinc-500 border border-white/5 hover:border-white/10'}`}>
-                    {t}
-                  </button>
-                ))}
+            {viewMode !== 'modelos' && (
+              <div>
+                <label className={LC}>Tipo de Despesa</label>
+                <div className="grid grid-cols-3 gap-2 mt-1.5">
+                  {(['variavel', 'fixa', 'parcelada'] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setForm({ ...form, tipo: t })}
+                      className={`py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${form.tipo === t ? 'bg-[#a3ff12] text-black shadow-lg' : 'bg-white/5 text-zinc-500 border border-white/5 hover:border-white/10'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -816,6 +939,90 @@ export default function Despesas() {
                   {categorias.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {form.tipo === 'variavel' && (
+                <div className="col-span-2">
+                  <Input 
+                    label="Data de Vencimento"
+                    required 
+                    type="date" 
+                    value={form.data_vencimento}
+                    onChange={e => setForm({ ...form, data_vencimento: e.target.value })} 
+                  />
+                </div>
+              )}
+              {form.tipo === 'fixa' && (
+                <div className="col-span-2 space-y-4">
+                  <Input 
+                    label="Dia de Vencimento (1-31)"
+                    required 
+                    type="number" 
+                    min="1" 
+                    max="31"
+                    value={form.data_vencimento ? new Date(form.data_vencimento + 'T12:00:00').getDate() : ''}
+                    onChange={e => {
+                      const day = parseInt(e.target.value);
+                      if (day >= 1 && day <= 31) {
+                        const now = new Date();
+                        const d = new Date(now.getFullYear(), now.getMonth(), day);
+                        setForm({ ...form, data_vencimento: d.toISOString().split('T')[0] });
+                      }
+                    }}
+                    placeholder="Ex: 5"
+                  />
+                </div>
+              )}
+              {form.tipo === 'parcelada' && (
+                <>
+                  <div>
+                    <Input 
+                      label="Nº Parcelas"
+                      required 
+                      type="number" 
+                      min="2" 
+                      value={form.numero_parcelas}
+                      onChange={e => {
+                        const n = e.target.value;
+                        setForm({ ...form, numero_parcelas: n });
+                        if (useCustomDates) {
+                          const count = parseInt(n) || 2;
+                          setCustomDates(prev => {
+                            const base = form.data_vencimento || new Date().toISOString().split('T')[0];
+                            return Array.from({ length: count }, (_, i) => {
+                              if (prev[i]) return prev[i];
+                              const d = new Date(base + 'T12:00:00');
+                              d.setMonth(d.getMonth() + i);
+                              return d.toISOString().split('T')[0];
+                            });
+                          });
+                        }
+                      }} 
+                    />
+                  </div>
+                  <div>
+                    <Input 
+                      label="1ª Parcela em"
+                      required={!useCustomDates}
+                      type="date" 
+                      value={form.data_vencimento}
+                      onChange={e => {
+                        setForm({ ...form, data_vencimento: e.target.value });
+                        if (useCustomDates) {
+                          const base = e.target.value;
+                          const count = parseInt(form.numero_parcelas) || 2;
+                          setCustomDates(Array.from({ length: count }, (_, i) => {
+                            const d = new Date(base + 'T12:00:00');
+                            d.setMonth(d.getMonth() + i);
+                            return d.toISOString().split('T')[0];
+                          }));
+                        }
+                      }} 
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {form.tipo === 'fixa' && (
@@ -883,63 +1090,56 @@ export default function Despesas() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {form.tipo === 'variavel' && (
-                <div className="col-span-2">
-                  <Input 
-                    label="Data de Vencimento"
-                    required 
-                    type="date" 
-                    value={form.data_vencimento}
-                    onChange={e => setForm({ ...form, data_vencimento: e.target.value })} 
-                  />
-                </div>
-              )}
-              {form.tipo === 'fixa' && (
-                <div className="col-span-2 space-y-4">
-                  <Input 
-                    label="Dia de Vencimento (1-31)"
-                    required 
-                    type="number" 
-                    min="1" 
-                    max="31"
-                    value={form.data_vencimento ? new Date(form.data_vencimento + 'T12:00:00').getDate() : ''}
-                    onChange={e => {
-                      const day = parseInt(e.target.value);
-                      if (day >= 1 && day <= 31) {
-                        const now = new Date();
-                        const d = new Date(now.getFullYear(), now.getMonth(), day);
-                        setForm({ ...form, data_vencimento: d.toISOString().split('T')[0] });
-                      }
-                    }}
-                    placeholder="Ex: 5"
-                  />
-                </div>
-              )}
-              {form.tipo === 'parcelada' && (
-                <>
-                  <div>
-                    <Input 
-                      label="Nº Parcelas"
-                      required 
-                      type="number" 
-                      min="2" 
-                      value={form.numero_parcelas}
-                      onChange={e => setForm({ ...form, numero_parcelas: e.target.value })} 
-                    />
+            {/* Datas Personalizadas */}
+            {form.tipo === 'parcelada' && (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !useCustomDates;
+                    setUseCustomDates(next);
+                    if (next) {
+                      const count = parseInt(form.numero_parcelas) || 2;
+                      const base = form.data_vencimento || new Date().toISOString().split('T')[0];
+                      setCustomDates(Array.from({ length: count }, (_, i) => {
+                        const d = new Date(base + 'T12:00:00');
+                        d.setMonth(d.getMonth() + i);
+                        return d.toISOString().split('T')[0];
+                      }));
+                    }
+                  }}
+                  className={`w-full py-3 px-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${
+                    useCustomDates 
+                      ? 'bg-[#a3ff12]/10 border-[#a3ff12]/40 text-[#a3ff12]' 
+                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <Calendar size={14} />
+                  {useCustomDates ? 'Datas Personalizadas Ativadas' : 'Personalizar Datas de Cada Parcela'}
+                </button>
+
+                {useCustomDates && (
+                  <div className="space-y-2 p-4 bg-black/30 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Defina a data de cada parcela:</p>
+                    {customDates.map((date, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <span className="text-[10px] font-black text-zinc-500 uppercase w-20 shrink-0">Parcela {idx + 1}</span>
+                        <input
+                          type="date"
+                          value={date}
+                          onChange={e => {
+                            const updated = [...customDates];
+                            updated[idx] = e.target.value;
+                            setCustomDates(updated);
+                          }}
+                          className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-bold outline-none focus:border-[#a3ff12] transition-colors"
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <Input 
-                      label="1ª Parcela em"
-                      required 
-                      type="date" 
-                      value={form.data_vencimento}
-                      onChange={e => setForm({ ...form, data_vencimento: e.target.value })} 
-                    />
-                  </div>
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className={LC}>Observações (opcional)</label>
