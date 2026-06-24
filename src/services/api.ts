@@ -20,13 +20,17 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       window.dispatchEvent(new CustomEvent('session-expired'));
     }
     let errorMsg = response.statusText;
+    let extraData: any = {};
     try {
       const errorData = await response.json();
-      errorMsg = errorData.error || errorMsg;
+      errorMsg = errorData.error || errorData.message || errorMsg;
+      extraData = errorData;
     } catch (e) {
       // Ignora erro de parse de JSON caso não tenha corpo de erro
     }
-    throw new Error(errorMsg);
+    const err: any = new Error(errorMsg);
+    Object.assign(err, extraData);
+    throw err;
   }
 
   // Verifica se não há conteúdo (204 No Content)

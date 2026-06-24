@@ -3,6 +3,7 @@ import { Calendar, CheckCircle2, Loader2, ChevronLeft, ChevronRight, Zap, Info, 
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -20,7 +21,7 @@ export default function Pagamentos() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
-  
+  const [showReplaceModal, setShowReplaceModal] = useState<{show: boolean, message: string}>({show: false, message: ''});
   const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
 
   // Filtros Avançados
@@ -80,8 +81,19 @@ export default function Pagamentos() {
   });
 
   const gerarFixas = useMutation({
-    mutationFn: () => apiFetch('/api/despesas/gerar-fixas', { method: 'POST', body: JSON.stringify({ month, year }) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['despesas'] })
+    mutationFn: (replace: boolean = false) => apiFetch('/api/despesas/gerar-fixas', { method: 'POST', body: JSON.stringify({ month, year, replace }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      toast.success('Despesas fixas geradas com sucesso!');
+      setShowReplaceModal({show: false, message: ''});
+    },
+    onError: (err: any) => {
+      if (err.promptReplace) {
+        setShowReplaceModal({ show: true, message: err.message });
+      } else {
+        toast.error(err.message || 'Erro ao gerar despesas fixas.');
+      }
+    }
   });
 
   const handleToggleState = (id: string, isPago: boolean) => {
@@ -112,7 +124,7 @@ export default function Pagamentos() {
     return ((current - prev) / prev) * 100;
   };
 
-  const handleGerarFixas = () => gerarFixas.mutate();
+  const handleGerarFixas = () => gerarFixas.mutate(false);
 
   const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
@@ -531,6 +543,38 @@ export default function Pagamentos() {
           </div>
         </div>
       )}
+      {/* Replace Confirmation Modal */}
+      {showReplaceModal.show && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowReplaceModal({show: false, message: ''})} />
+          <div className="bg-[#15151A] border border-[#a3ff12]/30 rounded-[2rem] w-full max-w-md overflow-hidden relative z-10 shadow-[0_0_50px_rgba(163,255,18,0.1)] animate-in zoom-in duration-300">
+            <div className="p-8 text-center space-y-6">
+              <div className="w-20 h-20 bg-[#a3ff12]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="w-10 h-10 text-[#a3ff12]" />
+              </div>
+              <h2 className="text-2xl font-black text-white tracking-tighter">Atenção</h2>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                {showReplaceModal.message}
+              </p>
+              <div className="flex flex-col gap-3 pt-4">
+                <button 
+                  onClick={() => gerarFixas.mutate(true)}
+                  className="w-full py-4 bg-[#a3ff12] text-black font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg"
+                >
+                  SIM, SUBSTITUIR
+                </button>
+                <button 
+                  onClick={() => setShowReplaceModal({show: false, message: ''})}
+                  className="w-full py-4 bg-white/5 text-white font-bold rounded-xl hover:bg-white/10 active:scale-95 transition-all"
+                >
+                  CANCELAR
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -791,15 +791,38 @@ app.post('/api/despesas', authenticateToken, async (req, res) => {
     } else {
       const is_modelo = tipo === 'fixa';
       const result = await pool.query(
-        `INSERT INTO public.despesas (user_id, descricao, valor, data_vencimento, tipo, numero_parcelas, valor_total, observacoes, is_modelo, categoria) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-        [req.user.id, descricao, v_valor, data_vencimento, tipo, v_parcelas, v_total, observacoes, is_modelo, v_cat]
+        `INSERT INTO public.despesas (user_id, descricao, valor, data_vencimento, tipo, numero_parcelas, valor_total, observacoes, is_modelo, categoria, usa_media) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        [req.user.id, descricao, v_valor, data_vencimento, tipo, v_parcelas, v_total, observacoes, is_modelo, v_cat, req.body.usa_media || false]
       );
       res.json(result.rows[0]);
     }
   } catch (err) { 
     console.error("Erro ao salvar despesa:", err);
     res.status(500).json({ error: err.message }); 
+  }
+});
+
+app.put('/api/despesas/:id', authenticateToken, async (req, res) => {
+  const { descricao, valor, data_vencimento, tipo, numero_parcelas, valor_total, observacoes, categoria, usa_media } = req.body;
+  try {
+    const v_valor = valor === '' ? null : parseFloat(valor);
+    const v_total = valor_total === '' ? null : parseFloat(valor_total);
+    const v_parcelas = (numero_parcelas === '' || !numero_parcelas) ? null : parseInt(numero_parcelas);
+    const v_cat = categoria || 'Outros';
+
+    const result = await pool.query(
+      `UPDATE public.despesas SET 
+        descricao = $1, valor = $2, data_vencimento = $3, tipo = $4, 
+        numero_parcelas = $5, valor_total = $6, observacoes = $7, 
+        categoria = $8, usa_media = $9, updated_at = now() 
+       WHERE id = $10 AND user_id = $11 RETURNING *`,
+      [descricao, v_valor, data_vencimento, tipo, v_parcelas, v_total, observacoes, v_cat, usa_media || false, req.params.id, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -845,15 +868,33 @@ app.patch('/api/despesas/:id/valor', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/despesas/gerar-fixas', authenticateToken, async (req, res) => {
-  const { month, year } = req.body;
+  const { month, year, replace } = req.body;
   try {
     const modelos = await pool.query(`SELECT * FROM public.despesas WHERE user_id = $1 AND is_modelo = true`, [req.user.id]);
+    
+    if (!replace) {
+      const checkExisting = await pool.query(`SELECT id FROM public.despesas WHERE user_id = $1 AND EXTRACT(MONTH FROM data_vencimento) = $2 AND EXTRACT(YEAR FROM data_vencimento) = $3 AND is_modelo = false AND tipo = 'fixa'`, [req.user.id, parseInt(month), parseInt(year)]);
+      if (checkExisting.rows.length > 0) {
+        return res.status(409).json({ error: 'As despesas já foram geradas para o mês, gostaria de substituir?', promptReplace: true });
+      }
+    } else {
+      await pool.query(`DELETE FROM public.despesas WHERE user_id = $1 AND EXTRACT(MONTH FROM data_vencimento) = $2 AND EXTRACT(YEAR FROM data_vencimento) = $3 AND is_modelo = false AND tipo = 'fixa'`, [req.user.id, parseInt(month), parseInt(year)]);
+    }
+
     let createdCount = 0;
     for (const modelo of modelos.rows) {
+      let finalValor = modelo.valor;
+      if (modelo.usa_media) {
+         const mediaQuery = await pool.query(`SELECT AVG(valor) as media_valor FROM public.despesas WHERE user_id = $1 AND descricao = $2 AND is_modelo = false AND data_vencimento >= date_trunc('month', current_date - interval '6 months')`, [req.user.id, modelo.descricao]);
+         if (mediaQuery.rows.length > 0 && mediaQuery.rows[0].media_valor != null) {
+            finalValor = mediaQuery.rows[0].media_valor;
+         }
+      }
+      
       const exists = await pool.query(`SELECT id FROM public.despesas WHERE user_id = $1 AND descricao = $2 AND EXTRACT(MONTH FROM data_vencimento) = $3 AND EXTRACT(YEAR FROM data_vencimento) = $4 AND is_modelo = false`, [req.user.id, modelo.descricao, parseInt(month), parseInt(year)]);
       if (exists.rows.length === 0) {
         const novaData = new Date(year, month - 1, new Date(modelo.data_vencimento).getDate());
-        await pool.query(`INSERT INTO public.despesas (user_id, descricao, valor, data_vencimento, tipo, observacoes, is_modelo, categoria) VALUES ($1, $2, $3, $4, $5, $6, false, $7)`, [req.user.id, modelo.descricao, modelo.valor, novaData, 'fixa', modelo.observacoes, modelo.categoria]);
+        await pool.query(`INSERT INTO public.despesas (user_id, descricao, valor, data_vencimento, tipo, observacoes, is_modelo, categoria) VALUES ($1, $2, $3, $4, $5, $6, false, $7)`, [req.user.id, modelo.descricao, finalValor, novaData, 'fixa', modelo.observacoes, modelo.categoria]);
         createdCount++;
       }
     }
