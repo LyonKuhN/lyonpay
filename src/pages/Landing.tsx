@@ -237,7 +237,7 @@ export default function Landing() {
               <button onClick={() => navigate('/dashboard')} className="text-sm font-bold bg-[#D7FF67] text-[#0A0A0A] px-5 py-2 rounded-full hover:opacity-90 transition-all">Ir para o App</button>
             ) : (
               <>
-                <button onClick={() => setIsAuthModalOpen('login')} className="text-sm font-bold text-[#888888] hover:text-[#FCFCFC] transition-colors hidden md:block">Entrar</button>
+                <button onClick={() => setIsAuthModalOpen('login')} className="text-sm font-bold text-[#888888] hover:text-[#FCFCFC] transition-colors">Entrar</button>
                 <button onClick={() => setIsAuthModalOpen('register')} className="text-sm font-bold bg-[#D7FF67] text-[#0A0A0A] px-5 py-2 rounded-full hover:opacity-90 transition-all">
                   Começar grátis
                 </button>
