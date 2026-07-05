@@ -19,6 +19,7 @@ export default function Config() {
   const [subscribing, setSubscribing] = useState(false);
   const [toggling2FA, setToggling2FA] = useState(false);
   const [name, setName] = useState(user?.name || '');
+  const [notificacoesDiarias, setNotificacoesDiarias] = useState(user?.notificacoes_diarias ?? true);
 
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
@@ -101,12 +102,12 @@ export default function Config() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ name, notificacoes_diarias: notificacoesDiarias })
       });
 
       if (response.ok) {
         toast.success('Perfil atualizado com sucesso!');
-        updateUser({ ...user!, name });
+        updateUser({ ...user!, name, notificacoes_diarias: notificacoesDiarias });
       } else {
         toast.error('Erro ao atualizar perfil');
       }
@@ -208,6 +209,19 @@ export default function Config() {
             <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">E-mail (Login)</label>
             <input type="email" defaultValue={user?.email} disabled className="w-full bg-black/20 border border-white/5 rounded-2xl px-6 py-4 text-zinc-600 font-bold cursor-not-allowed" />
           </div>
+        </div>
+        
+        <div className="mt-8 bg-black/40 border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 text-center md:text-left">
+          <div>
+            <h3 className="text-xl font-black text-white mb-2">Notificações Diárias</h3>
+            <p className="text-sm text-zinc-400">Receba um e-mail diário avisando sobre contas que vencem no dia atual.</p>
+          </div>
+          <button 
+            onClick={() => setNotificacoesDiarias(!notificacoesDiarias)}
+            className={`w-full md:w-auto px-8 py-4 font-black rounded-2xl transition-all flex items-center justify-center gap-3 ${notificacoesDiarias ? 'bg-[#a3ff12] text-black hover:scale-105 shadow-[0_10px_30px_rgba(163,255,18,0.2)]' : 'bg-white/5 text-zinc-500 hover:text-white border border-white/10 hover:border-white/20'}`}
+          >
+            {notificacoesDiarias ? 'ATIVADO' : 'DESATIVADO'}
+          </button>
         </div>
 
         <button 

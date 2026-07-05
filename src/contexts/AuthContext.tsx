@@ -8,6 +8,7 @@ interface User {
   subscribed: boolean;
   expires_at?: string;
   two_factor_enabled?: boolean | null;
+  notificacoes_diarias?: boolean;
 }
 
 interface AuthContextType {

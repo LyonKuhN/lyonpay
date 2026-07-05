@@ -37,6 +37,7 @@ import { Resend } from 'resend';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pool from './db.js';
+import { initCronJobs } from './cron.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 const resend = new Resend(process.env.RESEND_API_KEY || '');
@@ -228,7 +229,7 @@ app.post('/api/auth/verify', authLimiter, async (req, res) => {
     const result = await pool.query('UPDATE auth.users SET confirmed = true, confirmation_token = null WHERE confirmation_token = $1 RETURNING id, email, role, two_factor_enabled', [token]);
     if (result.rows.length === 0) return res.status(400).json({ error: 'Token inválido' });
     const user = result.rows[0];
-    const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [user.id]);
+    const profile = await pool.query('SELECT display_name, notificacoes_diarias FROM public.profiles WHERE user_id = $1', [user.id]);
     const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [user.id]);
     const name = profile.rows[0]?.display_name || 'Usuário';
 
@@ -352,7 +353,7 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
     }
     
     const userData = user.rows[0];
-    const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [userData.id]);
+    const profile = await pool.query('SELECT display_name, notificacoes_diarias FROM public.profiles WHERE user_id = $1', [userData.id]);
     const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [userData.id]);
     const displayName = profile.rows[0]?.display_name || 'Usuário';
 
@@ -389,7 +390,8 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
         role: userData.role,
         subscribed: sub.rows[0]?.subscribed || false,
         expires_at: sub.rows[0]?.expires_at,
-        two_factor_enabled: userData.two_factor_enabled
+        two_factor_enabled: userData.two_factor_enabled,
+        notificacoes_diarias: profile.rows[0]?.notificacoes_diarias
       }
     });
   } catch (err) {
@@ -431,11 +433,11 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       return res.json({ requires_2fa: true, email: user.email });
     }
 
-    const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [user.id]);
+    const profile = await pool.query('SELECT display_name, notificacoes_diarias FROM public.profiles WHERE user_id = $1', [user.id]);
     const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [user.id]);
     const name = profile.rows[0]?.display_name || 'Usuário';
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '3h' });
-    res.json({ token, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at, two_factor_enabled: user.two_factor_enabled } });
+    res.json({ token, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at, two_factor_enabled: user.two_factor_enabled, notificacoes_diarias: profile.rows[0]?.notificacoes_diarias } });
   } catch (err) { 
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
     res.status(500).json({ error: err.message }); 
@@ -455,12 +457,12 @@ app.post('/api/auth/verify-2fa', authLimiter, async (req, res) => {
 
     await pool.query('UPDATE auth.users SET two_factor_code = null, two_factor_expires_at = null WHERE id = $1', [user.id]);
 
-    const profile = await pool.query('SELECT display_name FROM public.profiles WHERE user_id = $1', [user.id]);
+    const profile = await pool.query('SELECT display_name, notificacoes_diarias FROM public.profiles WHERE user_id = $1', [user.id]);
     const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [user.id]);
     const name = profile.rows[0]?.display_name || 'Usuário';
     
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '3h' });
-    res.json({ token, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at, two_factor_enabled: true } });
+    res.json({ token, user: { id: user.id, email: user.email, name, role: user.role, subscribed: sub.rows[0]?.subscribed || false, expires_at: sub.rows[0]?.expires_at, two_factor_enabled: true, notificacoes_diarias: profile.rows[0]?.notificacoes_diarias } });
   } catch (err) { 
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
     res.status(500).json({ error: err.message }); 
@@ -588,9 +590,24 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
 });
 
 app.patch('/api/auth/me', authenticateToken, async (req, res) => {
-  const { name } = req.body;
+  const { name, notificacoes_diarias } = req.body;
   try {
-    await pool.query('UPDATE public.profiles SET display_name = $1 WHERE user_id = $2', [name, req.user.id]);
+    let updateFields = [];
+    let values = [];
+    let idx = 1;
+    if (name !== undefined) {
+      updateFields.push(`display_name = $${idx++}`);
+      values.push(name);
+    }
+    if (notificacoes_diarias !== undefined) {
+      updateFields.push(`notificacoes_diarias = $${idx++}`);
+      values.push(notificacoes_diarias);
+    }
+    values.push(req.user.id);
+    
+    if (updateFields.length > 0) {
+      await pool.query(`UPDATE public.profiles SET ${updateFields.join(', ')} WHERE user_id = $${idx}`, values);
+    }
     res.json({ message: 'Perfil atualizado' });
   } catch (err) { 
     console.error(`ERRO em ${req.method} ${req.url}:`, err);
@@ -1182,8 +1199,12 @@ setInterval(checkReminders, 5 * 60 * 1000);
 // Executa uma vez na inicialização (após 10 segundos)
 setTimeout(checkReminders, 10000);
 
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => console.log(`Servidor Lyonk rodando na porta ${PORT}`));
+initCronJobs();
+
+const PORT = process.env.PORT || 3005;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
 
 
 // --- DASHBOARD ROUTES ---
