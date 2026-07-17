@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Users, TrendingUp, ShieldCheck, Save, Loader2, ArrowRight, Star, Ticket, Plus, Trash2 } from 'lucide-react';
+import { Users, TrendingUp, ShieldCheck, Save, Loader2, ArrowRight, Star, Ticket, Plus, Trash2, ShoppingCart, Bell } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
@@ -266,6 +267,49 @@ export default function Admin() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Modulos List */}
+      <div className="space-y-6 pb-8">
+        <div className="flex items-center justify-between px-4">
+          <h3 className="text-2xl font-black text-white flex items-center gap-3">
+            <div className="w-2 h-6 bg-[#3B82F6] rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" /> Ferramentas Adicionais
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link to="/admin/compras" className="p-8 rounded-[2.5rem] bg-[#15151A] border border-white/5 relative overflow-hidden group hover:border-[#3B82F6]/30 transition-all flex items-center justify-between">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#3B82F6]/5 blur-3xl group-hover:bg-[#3B82F6]/10 transition-all" />
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 rounded-2xl bg-[#3B82F6]/10 text-[#3B82F6] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ShoppingCart size={32} />
+              </div>
+              <div>
+                <h4 className="text-2xl font-black text-white">Lista de Compras</h4>
+                <p className="text-sm font-bold text-zinc-500">Gerenciar compras e prioridades</p>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/50 group-hover:bg-[#3B82F6]/20 group-hover:text-[#3B82F6] transition-all relative z-10">
+              <ArrowRight size={20} />
+            </div>
+          </Link>
+
+          <Link to="/admin/lembretes" className="p-8 rounded-[2.5rem] bg-[#15151A] border border-white/5 relative overflow-hidden group hover:border-[#8B5CF6]/30 transition-all flex items-center justify-between">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#8B5CF6]/5 blur-3xl group-hover:bg-[#8B5CF6]/10 transition-all" />
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 rounded-2xl bg-[#8B5CF6]/10 text-[#8B5CF6] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Bell size={32} />
+              </div>
+              <div>
+                <h4 className="text-2xl font-black text-white">Lembretes</h4>
+                <p className="text-sm font-bold text-zinc-500">Avisos e alertas agendados</p>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/50 group-hover:bg-[#8B5CF6]/20 group-hover:text-[#8B5CF6] transition-all relative z-10">
+              <ArrowRight size={20} />
+            </div>
+          </Link>
         </div>
       </div>
 

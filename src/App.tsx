@@ -9,6 +9,8 @@ import Pagamentos from './pages/Pagamentos';
 import Calendario from './pages/Calendario';
 import Config from './pages/Config';
 import Admin from './pages/Admin';
+import AdminCompras from './pages/AdminCompras';
+import AdminLembretes from './pages/AdminLembretes';
 import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CookieConsent from './components/CookieConsent';
@@ -244,6 +246,8 @@ function AppLayout() {
           <Route path="/pagamentos" element={<PrivateRoute><Pagamentos /></PrivateRoute>} />
           <Route path="/config" element={<PrivateRoute allowExpired={true}><Config /></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute>{user?.role === 'admin' ? <Admin /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
+          <Route path="/admin/compras" element={<PrivateRoute>{user?.role === 'admin' ? <AdminCompras /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
+          <Route path="/admin/lembretes" element={<PrivateRoute>{user?.role === 'admin' ? <AdminLembretes /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
         </Routes>
       </main>
 

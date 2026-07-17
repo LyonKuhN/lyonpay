@@ -1282,6 +1282,63 @@ app.delete('/api/admin/cupons/:id', authenticateToken, isAdmin, async (req, res)
   }
 });
 
+// --- COMPRAS ROUTES ---
+app.get('/api/admin/compras', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM public.compras ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/compras', authenticateToken, isAdmin, async (req, res) => {
+  const { item, grupo, prioridade, valor } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO public.compras (item, grupo, prioridade, valor) VALUES ($1, $2, $3, $4) RETURNING *',
+      [item, grupo || null, prioridade, valor]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/admin/compras/:id', authenticateToken, isAdmin, async (req, res) => {
+  const { comprado, item, grupo, prioridade, valor } = req.body;
+  try {
+    // If only 'comprado' is provided (toggle action)
+    if (item === undefined) {
+      const result = await pool.query(
+        'UPDATE public.compras SET comprado = $1 WHERE id = $2 RETURNING *',
+        [comprado, req.params.id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: 'Compra não encontrada' });
+      return res.json(result.rows[0]);
+    }
+
+    // Otherwise, full update
+    const result = await pool.query(
+      'UPDATE public.compras SET item = $1, grupo = $2, prioridade = $3, valor = $4 WHERE id = $5 RETURNING *',
+      [item, grupo || null, prioridade, valor, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Compra não encontrada' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/compras/:id', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM public.compras WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Compra removida' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/config/aplicar-cupom', authenticateToken, async (req, res) => {
   const { codigo } = req.body;
   try {
