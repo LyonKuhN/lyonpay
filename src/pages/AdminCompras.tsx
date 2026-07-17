@@ -340,7 +340,7 @@ export default function AdminCompras() {
     return (
       <div 
         onClick={() => startEdit(compra)}
-        className={`group p-4 md:p-6 rounded-3xl bg-[#15151A] border border-white/5 hover:border-[#3B82F6]/30 cursor-pointer transition-all relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 ${compra.comprado ? 'opacity-50 grayscale hover:grayscale-0' : ''}`}
+        className={`group p-4 md:p-6 rounded-3xl bg-[#15151A] border border-white/5 hover:border-[#3B82F6]/30 cursor-pointer transition-all relative flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 ${compra.comprado ? 'opacity-50 grayscale hover:grayscale-0' : ''}`}
       >
         <div className="absolute top-0 right-0 w-20 h-20 bg-[#3B82F6]/0 group-hover:bg-[#3B82F6]/5 blur-3xl transition-all pointer-events-none" />
         
@@ -506,8 +506,8 @@ export default function AdminCompras() {
         </div>
       </div>
 
-      <div className="p-5 md:p-8 rounded-[2.5rem] bg-[#15151A] border border-white/5 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#3B82F6]/5 blur-3xl pointer-events-none" />
+      <div className="p-5 md:p-8 rounded-[2.5rem] bg-[#15151A] border border-white/5 relative group">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#3B82F6]/5 blur-3xl pointer-events-none rounded-[2.5rem]" />
         <h3 className="text-lg md:text-xl font-black text-white flex items-center gap-2 mb-4 md:mb-6">
           <Plus className="text-[#3B82F6]" size={18}/> Nova Aquisição
         </h3>
