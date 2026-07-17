@@ -565,7 +565,6 @@ export default function AdminCompras() {
           <div className="space-y-6 md:space-y-8">
             {Object.entries(itensPorGrupo).map(([grupo, itens]) => {
               const valorTotalGrupo = itens.reduce((acc, curr) => acc + Number(curr.valor), 0);
-              const itensComprados = itens.filter(i => i.comprado).length;
               const isExpanded = gruposExpandidos[grupo];
 
               return (
