@@ -21,6 +21,7 @@ export default function AdminCompras() {
 
   const [newItem, setNewItem] = useState('');
   const [newGrupo, setNewGrupo] = useState('');
+  const [isGrupoFocus, setIsGrupoFocus] = useState(false);
   const [newPrioridade, setNewPrioridade] = useState<'Alta' | 'Média' | 'Baixa'>('Média');
   const [newValor, setNewValor] = useState('');
   const [busca, setBusca] = useState('');
@@ -33,6 +34,7 @@ export default function AdminCompras() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editItem, setEditItem] = useState('');
   const [editGrupo, setEditGrupo] = useState('');
+  const [isEditGrupoFocus, setIsEditGrupoFocus] = useState(false);
   const [editPrioridade, setEditPrioridade] = useState<'Alta' | 'Média' | 'Baixa'>('Média');
   const [editValor, setEditValor] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -282,17 +284,34 @@ export default function AdminCompras() {
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 block">Item</label>
               <input value={editItem} onChange={e => setEditItem(e.target.value)} className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all"/>
             </div>
-            <div>
+            <div className="relative">
               <label className="text-[9px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 md:mb-2 block">Grupo</label>
-            <input value={editGrupo} onChange={e => setEditGrupo(e.target.value)} className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all" placeholder="Avulso se vazio"/>
-            {todosOsGrupos.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {todosOsGrupos.map(g => (
-                  <button type="button" key={g} onClick={() => setEditGrupo(g)} className="px-2 py-1 bg-white/5 rounded-md text-[9px] text-zinc-400 hover:text-white hover:bg-white/10 transition-all">{g}</button>
-                ))}
-              </div>
-            )}
-          </div>
+              <input 
+                value={editGrupo} 
+                onChange={e => setEditGrupo(e.target.value)} 
+                onFocus={() => setIsEditGrupoFocus(true)}
+                onBlur={() => setTimeout(() => setIsEditGrupoFocus(false), 200)}
+                className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all" 
+                placeholder="Avulso se vazio"
+              />
+              {isEditGrupoFocus && todosOsGrupos.filter(g => g.toLowerCase().includes(editGrupo.toLowerCase())).length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[#15151A] border border-[#3B82F6]/30 rounded-xl shadow-2xl z-50 max-h-40 overflow-y-auto overflow-x-hidden p-1">
+                  {todosOsGrupos.filter(g => g.toLowerCase().includes(editGrupo.toLowerCase())).map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => {
+                        setEditGrupo(g);
+                        setIsEditGrupoFocus(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-[#3B82F6]/10 hover:text-white rounded-lg transition-colors truncate"
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           <div>
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 block">Prioridade</label>
               <select value={editPrioridade} onChange={e => setEditPrioridade(e.target.value as any)} className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all appearance-none cursor-pointer">
@@ -498,17 +517,27 @@ export default function AdminCompras() {
             <label className="text-[9px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 md:mb-2 block">Item a Comprar</label>
             <input required value={newItem} onChange={e => setNewItem(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm md:text-base text-white focus:border-[#3B82F6] outline-none transition-all placeholder:text-zinc-700" placeholder="Ex: Celular, Papel A4..."/>
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-3 relative">
             <label className="text-[9px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 md:mb-2 block">Grupo (Opcional)</label>
-            <input value={newGrupo} onChange={e => setNewGrupo(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm md:text-base text-white focus:border-[#3B82F6] outline-none transition-all placeholder:text-zinc-700" placeholder="Ex: Mercado, Escritório..." />
-            {todosOsGrupos.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {todosOsGrupos.map(g => (
-                  <button 
-                    type="button" 
-                    key={g} 
-                    onClick={() => setNewGrupo(g)} 
-                    className="px-2.5 py-1 bg-[#3B82F6]/10 border border-[#3B82F6]/20 rounded-lg text-[10px] font-bold text-[#3B82F6] hover:bg-[#3B82F6] hover:text-white transition-all"
+            <input 
+              value={newGrupo} 
+              onChange={e => setNewGrupo(e.target.value)} 
+              onFocus={() => setIsGrupoFocus(true)}
+              onBlur={() => setTimeout(() => setIsGrupoFocus(false), 200)}
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm md:text-base text-white focus:border-[#3B82F6] outline-none transition-all placeholder:text-zinc-700" 
+              placeholder="Ex: Mercado, Escritório..." 
+            />
+            {isGrupoFocus && todosOsGrupos.filter(g => g.toLowerCase().includes(newGrupo.toLowerCase())).length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[#15151A] border border-white/10 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto overflow-x-hidden p-1">
+                {todosOsGrupos.filter(g => g.toLowerCase().includes(newGrupo.toLowerCase())).map(g => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => {
+                      setNewGrupo(g);
+                      setIsGrupoFocus(false);
+                    }}
+                    className="w-full text-left px-3 py-2.5 text-sm md:text-base text-zinc-300 hover:bg-[#3B82F6]/10 hover:text-[#3B82F6] rounded-lg transition-colors truncate"
                   >
                     {g}
                   </button>

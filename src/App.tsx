@@ -227,8 +227,8 @@ function AppLayout() {
 
       {!isLanding && theme === 'dark' && (
         <>
-          <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#a3ff12]/5 blur-[150px] rounded-full pointer-events-none" />
-          <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#FFD700]/5 blur-[150px] rounded-full pointer-events-none" />
+          <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full pointer-events-none opacity-20" style={{ background: 'radial-gradient(circle, #a3ff12 0%, transparent 70%)' }} />
+          <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full pointer-events-none opacity-20" style={{ background: 'radial-gradient(circle, #FFD700 0%, transparent 70%)' }} />
         </>
       )}
 
