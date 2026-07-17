@@ -283,10 +283,17 @@ export default function AdminCompras() {
               <input value={editItem} onChange={e => setEditItem(e.target.value)} className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all"/>
             </div>
             <div>
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 block">Grupo</label>
-              <input value={editGrupo} onChange={e => setEditGrupo(e.target.value)} className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all" placeholder="Avulso se vazio"/>
-            </div>
-            <div>
+              <label className="text-[9px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 md:mb-2 block">Grupo</label>
+            <input value={editGrupo} onChange={e => setEditGrupo(e.target.value)} className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all" placeholder="Avulso se vazio"/>
+            {todosOsGrupos.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {todosOsGrupos.map(g => (
+                  <button type="button" key={g} onClick={() => setEditGrupo(g)} className="px-2 py-1 bg-white/5 rounded-md text-[9px] text-zinc-400 hover:text-white hover:bg-white/10 transition-all">{g}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 block">Prioridade</label>
               <select value={editPrioridade} onChange={e => setEditPrioridade(e.target.value as any)} className="w-full bg-black/40 border border-[#3B82F6]/50 rounded-xl py-2 px-3 text-sm text-white focus:border-[#3B82F6] outline-none transition-all appearance-none cursor-pointer">
                 <option value="Baixa">Baixa</option>
@@ -493,10 +500,21 @@ export default function AdminCompras() {
           </div>
           <div className="md:col-span-3">
             <label className="text-[9px] md:text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1 md:mb-2 block">Grupo (Opcional)</label>
-            <input value={newGrupo} onChange={e => setNewGrupo(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm md:text-base text-white focus:border-[#3B82F6] outline-none transition-all placeholder:text-zinc-700" placeholder="Ex: Mercado, Escritório..." list="sugestoes-grupos" />
-            <datalist id="sugestoes-grupos">
-              {Object.keys(itensPorGrupo).map(g => <option key={g} value={g} />)}
-            </datalist>
+            <input value={newGrupo} onChange={e => setNewGrupo(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm md:text-base text-white focus:border-[#3B82F6] outline-none transition-all placeholder:text-zinc-700" placeholder="Ex: Mercado, Escritório..." />
+            {todosOsGrupos.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {todosOsGrupos.map(g => (
+                  <button 
+                    type="button" 
+                    key={g} 
+                    onClick={() => setNewGrupo(g)} 
+                    className="px-2.5 py-1 bg-[#3B82F6]/10 border border-[#3B82F6]/20 rounded-lg text-[10px] font-bold text-[#3B82F6] hover:bg-[#3B82F6] hover:text-white transition-all"
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 md:col-span-4 gap-3 md:gap-4">
             <div>

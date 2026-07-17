@@ -149,6 +149,7 @@ function FloatingNav() {
 
 function PrivateRoute({ children, allowExpired = false }: { children: React.ReactNode, allowExpired?: boolean }) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   // Aguarda a verificação do localStorage antes de redirecionar
   if (isLoading) {
@@ -159,7 +160,7 @@ function PrivateRoute({ children, allowExpired = false }: { children: React.Reac
     );
   }
 
-  if (!isAuthenticated) return <Navigate to="/" />;
+  if (!isAuthenticated) return <Navigate to="/" state={{ from: location.pathname }} replace />;
 
   if (user && user.role !== 'admin' && !allowExpired) {
     const isExpired = user.expires_at ? new Date(user.expires_at) < new Date() : true;

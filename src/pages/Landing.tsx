@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import { ArrowRight, Zap, Loader2, Mail, LayoutDashboard, CreditCard, Check, Star, Shield, TrendingUp, Clock, BarChart3, Users } from 'lucide-react';
@@ -12,6 +12,7 @@ import { IPhoneMockup } from '../components/ui/iphone-mockup';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<'login' | 'register' | 'forgot-password' | null>(null);
   const [loading, setLoading] = useState(false);
@@ -73,7 +74,8 @@ export default function Landing() {
           return;
         }
         login(data.token, data.user);
-        navigate('/dashboard');
+        const from = location.state?.from || '/dashboard';
+        navigate(from);
       }
     } catch (err: any) {
       setError(err.message);
@@ -95,7 +97,8 @@ export default function Landing() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Código inválido');
       login(data.token, data.user);
-      navigate('/dashboard');
+      const from = location.state?.from || '/dashboard';
+      navigate(from);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -187,7 +190,8 @@ export default function Landing() {
         }
         login(data.token, data.user);
         setIsAuthModalOpen(null);
-        navigate('/dashboard');
+        const from = location.state?.from || '/dashboard';
+        navigate(from);
       } catch (err: any) {
         setError(err.message);
       } finally {
