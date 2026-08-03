@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Tag, Bookmark, PieChart, Wallet, Layers, ChevronDown, Edit2, X, Search, Filter, Check, Calculator } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, Tag, Bookmark, PieChart, Wallet, Layers, ChevronDown, Edit2, X, Search, Filter, Check, Calculator, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -247,6 +247,35 @@ export default function Despesas() {
     }
   }
 
+  const handleExportCSV = () => {
+    const pendentes = despesas
+      .filter((d: any) => !d.pago && !d.is_modelo)
+      .sort((a: any, b: any) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime());
+
+    if (pendentes.length === 0) {
+      alert('Nenhuma despesa em aberto para exportar.');
+      return;
+    }
+
+    const header = ['Conta', 'Data de Vencimento', 'Valor (R$)'];
+    const rows = pendentes.map((d: any) => [
+      `"${(d.descricao || '').replace(/"/g, '""')}"`,
+      formatDate(d.data_vencimento),
+      `"${Number(d.valor).toFixed(2).replace('.', ',')}"`
+    ]);
+
+    const csvContent = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `Contas_em_Aberto_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="animate-in fade-in duration-700 max-w-6xl mx-auto pt-4 pb-20 px-4 md:px-6">
 
@@ -273,14 +302,24 @@ export default function Despesas() {
               ← Voltar para Despesas
             </button>
           ) : (
-            <button 
-              type="button"
-              onClick={() => setViewMode('modelos')}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-4 bg-[#FFD700]/10 hover:bg-[#FFD700]/20 text-[#FFD700] border border-[#FFD700]/20 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest active:scale-95 group"
-            >
-              <Bookmark className="w-4 h-4 transition-transform group-hover:scale-110 text-[#FFD700]" />
-              Modelos Fixos
-            </button>
+            <>
+              <button 
+                type="button"
+                onClick={handleExportCSV}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-4 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest active:scale-95 group"
+              >
+                <Download className="w-4 h-4 transition-transform group-hover:-translate-y-0.5 text-zinc-400 group-hover:text-white" />
+                Exportar CSV
+              </button>
+              <button 
+                type="button"
+                onClick={() => setViewMode('modelos')}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-4 bg-[#FFD700]/10 hover:bg-[#FFD700]/20 text-[#FFD700] border border-[#FFD700]/20 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest active:scale-95 group"
+              >
+                <Bookmark className="w-4 h-4 transition-transform group-hover:scale-110 text-[#FFD700]" />
+                Modelos Fixos
+              </button>
+            </>
           )}
           <button 
             type="button"
