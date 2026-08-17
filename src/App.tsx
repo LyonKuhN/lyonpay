@@ -1,24 +1,34 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, TrendingDown, TrendingUp, Settings, CreditCard, LogOut, Sun, Moon, ShieldCheck, Calendar, User } from 'lucide-react';
-import Landing from './pages/Landing';
-import Verify from './pages/Verify';
-import Dashboard from './pages/Dashboard';
-import Receitas from './pages/Receitas';
-import Despesas from './pages/Despesas';
-import Pagamentos from './pages/Pagamentos';
-import Calendario from './pages/Calendario';
-import Config from './pages/Config';
-import Admin from './pages/Admin';
-import AdminCompras from './pages/AdminCompras';
-import AdminLembretes from './pages/AdminLembretes';
-import ResetPassword from './pages/ResetPassword';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import CookieConsent from './components/CookieConsent';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { API_BASE_URL } from './config/api';
+
+// Landing Page carregada diretamente para rápida exibição (LCP)
+import Landing from './pages/Landing';
+import CookieConsent from './components/CookieConsent';
+
+// Code-Splitting para rotas secundárias/autenticadas via React.lazy
+const Verify = lazy(() => import('./pages/Verify'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Receitas = lazy(() => import('./pages/Receitas'));
+const Despesas = lazy(() => import('./pages/Despesas'));
+const Pagamentos = lazy(() => import('./pages/Pagamentos'));
+const Calendario = lazy(() => import('./pages/Calendario'));
+const Config = lazy(() => import('./pages/Config'));
+const Admin = lazy(() => import('./pages/Admin'));
+const AdminCompras = lazy(() => import('./pages/AdminCompras'));
+const AdminLembretes = lazy(() => import('./pages/AdminLembretes'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="w-8 h-8 border-2 border-[#a3ff12] border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 function FloatingNav() {
   const { user, logout } = useAuth();
@@ -151,13 +161,8 @@ function PrivateRoute({ children, allowExpired = false }: { children: React.Reac
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
-  // Aguarda a verificação do localStorage antes de redirecionar
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-2 border-[#a3ff12] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) return <Navigate to="/" state={{ from: location.pathname }} replace />;
@@ -204,7 +209,6 @@ function AppLayout() {
     }
   };
 
-  // Forçar Landing Page a ser sempre Dark Mode na raiz do HTML
   useEffect(() => {
     if (isLanding) {
       document.documentElement.classList.add('dark');
@@ -235,21 +239,23 @@ function AppLayout() {
       {!isLanding && <FloatingNav />}
 
       <main className={`${isLanding ? '' : 'pt-24 md:pt-32 pb-20 px-4 max-w-6xl mx-auto'} relative z-10 min-h-screen`}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/verify" element={<Verify />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/receitas" element={<PrivateRoute><Receitas /></PrivateRoute>} />
-          <Route path="/despesas" element={<PrivateRoute><Despesas /></PrivateRoute>} />
-          <Route path="/calendario" element={<PrivateRoute><Calendario /></PrivateRoute>} />
-          <Route path="/pagamentos" element={<PrivateRoute><Pagamentos /></PrivateRoute>} />
-          <Route path="/config" element={<PrivateRoute allowExpired={true}><Config /></PrivateRoute>} />
-          <Route path="/admin" element={<PrivateRoute>{user?.role === 'admin' ? <Admin /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
-          <Route path="/admin/compras" element={<PrivateRoute>{user?.role === 'admin' ? <AdminCompras /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
-          <Route path="/admin/lembretes" element={<PrivateRoute>{user?.role === 'admin' ? <AdminLembretes /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/verify" element={<Verify />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
+            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/receitas" element={<PrivateRoute><Receitas /></PrivateRoute>} />
+            <Route path="/despesas" element={<PrivateRoute><Despesas /></PrivateRoute>} />
+            <Route path="/calendario" element={<PrivateRoute><Calendario /></PrivateRoute>} />
+            <Route path="/pagamentos" element={<PrivateRoute><Pagamentos /></PrivateRoute>} />
+            <Route path="/config" element={<PrivateRoute allowExpired={true}><Config /></PrivateRoute>} />
+            <Route path="/admin" element={<PrivateRoute>{user?.role === 'admin' ? <Admin /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
+            <Route path="/admin/compras" element={<PrivateRoute>{user?.role === 'admin' ? <AdminCompras /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
+            <Route path="/admin/lembretes" element={<PrivateRoute>{user?.role === 'admin' ? <AdminLembretes /> : <Navigate to="/dashboard" />}</PrivateRoute>} />
+          </Routes>
+        </Suspense>
       </main>
 
       {show2FAPrompt && (
