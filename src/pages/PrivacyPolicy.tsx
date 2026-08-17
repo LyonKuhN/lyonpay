@@ -1,5 +1,6 @@
 import { ArrowLeft, Shield, FileText, Lock, Eye, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../components/SEO';
 
 export default function PrivacyPolicy() {
   const navigate = useNavigate();
@@ -33,13 +34,19 @@ export default function PrivacyPolicy() {
   ];
 
   return (
-    <div className="animate-in fade-in duration-700 max-w-4xl mx-auto pt-4 pb-20 px-4 md:px-6 relative">
+    <article className="animate-in fade-in duration-700 max-w-4xl mx-auto pt-4 pb-20 px-4 md:px-6 relative">
+      <SEO 
+        title="Política de Privacidade e Termos de Uso | Lyonk"
+        description="Conheça a política de privacidade e termos de uso do Lyonk. Seus dados financeiros protegidos com transparência e segurança absoluta de acordo com a LGPD."
+        canonicalUrl="https://lyonk.com.br/politica-de-privacidade"
+      />
+
       {/* Glow de Fundo */}
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#a3ff12]/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#FFD700]/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Cabeçalho */}
-      <div className="mb-8 flex flex-col gap-4">
+      <header className="mb-8 flex flex-col gap-4">
         <button 
           onClick={() => navigate(-1)} 
           className="self-start flex items-center gap-2 text-xs font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-all bg-white/5 px-4 py-2.5 rounded-full border border-white/5 active:scale-95"
@@ -48,47 +55,47 @@ export default function PrivacyPolicy() {
         </button>
 
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-white">
-          Privacidade & Termos
+          Privacidade & Termos de Uso
         </h1>
         <p className="text-zinc-500 text-xs md:text-sm font-bold uppercase tracking-wider">
           Política de Privacidade e Termos de Uso da Plataforma Lyonk
         </p>
-      </div>
+      </header>
 
       <div className="space-y-6 relative z-10">
         {/* Aviso Geral */}
-        <div className="p-6 bg-white/5 border border-white/10 rounded-[2rem] shadow-xl">
+        <section className="p-6 bg-white/5 border border-white/10 rounded-[2rem] shadow-xl">
           <p className="text-sm text-zinc-300 leading-relaxed font-semibold">
             Na Lyonk, acreditamos que sua vida financeira é assunto pessoal. Esta política descreve detalhadamente como coletamos, guardamos e protegemos seus dados para que você possa focar no seu controle financeiro com total paz de espírito.
           </p>
           <p className="text-[10px] font-black text-[#a3ff12] uppercase tracking-widest mt-4">
             Última atualização: Junho de 2026
           </p>
-        </div>
+        </section>
 
         {/* Seções de Detalhes */}
         <div className="space-y-4">
           {sections.map((sec, idx) => (
-            <div key={idx} className="p-6 md:p-8 bg-[#15151A] border border-white/5 rounded-[2rem] shadow-xl hover:border-white/10 transition-colors">
+            <section key={idx} className="p-6 md:p-8 bg-[#15151A] border border-white/5 rounded-[2rem] shadow-xl hover:border-white/10 transition-colors">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-11 h-11 rounded-2xl bg-[#a3ff12]/10 flex items-center justify-center text-[#a3ff12] shrink-0">
                   <sec.icon size={20} />
                 </div>
-                <h3 className="text-lg font-black text-white uppercase tracking-wider">{sec.title}</h3>
+                <h2 className="text-lg font-black text-white uppercase tracking-wider">{sec.title}</h2>
               </div>
               <p className="text-sm text-zinc-400 leading-relaxed font-medium">
                 {sec.content}
               </p>
-            </div>
+            </section>
           ))}
         </div>
 
         {/* Termos de Uso Básicos */}
-        <div className="p-6 md:p-8 bg-[#15151A] border border-[#FFD700]/20 rounded-[2rem] shadow-xl relative overflow-hidden">
+        <section className="p-6 md:p-8 bg-[#15151A] border border-[#FFD700]/20 rounded-[2rem] shadow-xl relative overflow-hidden">
           <div className="absolute top-[-50px] right-[-50px] w-[150px] h-[150px] bg-[#FFD700]/5 blur-[50px] rounded-full pointer-events-none" />
-          <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
             <span className="text-[#FFD700]">★</span> Termos de Responsabilidade
-          </h3>
+          </h2>
           <ul className="space-y-3 text-sm text-zinc-400 font-medium">
             <li className="flex items-start gap-2.5">
               <span className="text-[#FFD700] text-lg leading-none">•</span>
@@ -103,8 +110,8 @@ export default function PrivacyPolicy() {
               Reservamo-nos o direito de suspender acessos em caso de uso fraudulento do sistema ou comportamento que comprometa a estabilidade dos servidores.
             </li>
           </ul>
-        </div>
+        </section>
       </div>
-    </div>
+    </article>
   );
 }
