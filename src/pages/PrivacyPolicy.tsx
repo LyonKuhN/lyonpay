@@ -8,8 +8,8 @@ export default function PrivacyPolicy() {
   const sections = [
     {
       icon: Eye,
-      title: 'Coleta de Informações',
-      content: 'Coletamos apenas as informações estritamente necessárias para o funcionamento seguro da plataforma. Isso inclui seu nome, e-mail para login, senha criptografada e os registros financeiros (receitas, despesas, parcelas) que você voluntariamente cadastrar na plataforma.'
+      title: 'Coleta de Informações & PII',
+      content: 'Coletamos apenas as informações estritamente necessárias para o funcionamento seguro da plataforma (como nome e e-mail para autenticação). Jamais enviamos Informações Pessoais Identificáveis (PII), senhas ou dados financeiros brutos para ferramentas de terceiros ou serviços de métricas.'
     },
     {
       icon: Lock,
@@ -23,8 +23,8 @@ export default function PrivacyPolicy() {
     },
     {
       icon: FileText,
-      title: 'Cookies e Tecnologias Semelhantes',
-      content: 'Utilizamos apenas cookies funcionais e de sessão essenciais para manter sua conta conectada com segurança entre as trocas de páginas e lembrar suas preferências de layout (como o tema escuro/claro). Não rastreamos seu comportamento fora da nossa plataforma.'
+      title: 'Cookies e Analytics (Google Analytics & Clarity)',
+      content: 'Utilizamos cookies funcionais e ferramentas de métricas agregadas (como Google Analytics 4 e Microsoft Clarity) para analisar o tráfego, mapa de calor e usabilidade da plataforma. Todos os dados de análise são anonimizados e não contêm PII (informações pessoalmente identificáveis), garantindo total conformidade com a política de privacidade do Google e com a LGPD.'
     },
     {
       icon: CheckCircle,
@@ -37,7 +37,7 @@ export default function PrivacyPolicy() {
     <article className="animate-in fade-in duration-700 max-w-4xl mx-auto pt-4 pb-20 px-4 md:px-6 relative">
       <SEO 
         title="Política de Privacidade e Termos de Uso | Lyonk"
-        description="Conheça a política de privacidade e termos de uso do Lyonk. Seus dados financeiros protegidos com transparência e segurança absoluta de acordo com a LGPD."
+        description="Conheça a política de privacidade e termos de uso do Lyonk. Seus dados financeiros protegidos com transparência e conformidade total com a LGPD e Google Analytics."
         canonicalUrl="https://lyonk.com.br/politica-de-privacidade"
       />
 
