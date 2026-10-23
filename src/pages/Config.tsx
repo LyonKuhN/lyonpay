@@ -1,431 +1,313 @@
-import { useState, useEffect } from 'react';
-import { User, CreditCard, AlertTriangle, CheckCircle2, Trash2, Loader2, Save, Sparkles, PartyPopper, ShieldCheck } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { API_BASE_URL } from '../config/api';
+import toast from 'react-hot-toast';
+import { BellRing, CircleCheck, Crown, KeyRound, LogOut, Moon, Sparkles, Ticket, Trash2, TriangleAlert } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { apiFetch } from '../services/api';
+import { useConfirm } from '../components/ui/confirm';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge, Card, PageHeader, Switch } from '../components/ui/primitives';
+import { Sheet } from '../components/ui/sheet';
+import { cn } from '../lib/cn';
+
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section className="grid gap-3 lg:grid-cols-[240px_1fr] lg:gap-8">
+      <div className="px-1 lg:pt-1">
+        <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
+        {description && <p className="mt-0.5 text-[13px] text-muted">{description}</p>}
+      </div>
+      <Card className="overflow-hidden">{children}</Card>
+    </section>
+  );
+}
+
+function Row({ icon: Icon, title, description, control, className }: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  control?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex items-center gap-4 px-4 py-4 sm:px-5', className)}>
+      <Icon size={20} className="shrink-0 text-muted" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-medium text-fg">{title}</p>
+        {description && <p className="mt-0.5 text-[13px] text-muted">{description}</p>}
+      </div>
+      {control}
+    </div>
+  );
+}
 
 export default function Config() {
-  const { user, token, logout, updateUser } = useAuth();
+  const { user, logout, updateUser, refreshUser } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [cupom, setCupom] = useState('');
-  const [applyingCupom, setApplyingCupom] = useState(false);
-  const [cupomMessage, setCupomMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [updating, setUpdating] = useState(false);
-  const [subscribing, setSubscribing] = useState(false);
-  const [toggling2FA, setToggling2FA] = useState(false);
+
   const [name, setName] = useState(user?.name || '');
-  const [notificacoesDiarias, setNotificacoesDiarias] = useState(user?.notificacoes_diarias ?? true);
+  const [savingName, setSavingName] = useState(false);
+  const [savingNotif, setSavingNotif] = useState(false);
+  const [saving2FA, setSaving2FA] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [cupom, setCupom] = useState('');
+  const [cupomCheckout, setCupomCheckout] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [cupomMsg, setCupomMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [welcome, setWelcome] = useState(false);
+  const verified = useRef(false);
 
+  // Volta do checkout da Stripe
   useEffect(() => {
-    if (searchParams.get('success') === 'true') {
-      const verifySession = async () => {
-        try {
-          const res = await fetch(API_BASE_URL + '/api/stripe/verify-session', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (data.subscribed) {
-            updateUser({ ...user!, subscribed: true, expires_at: data.expires_at });
-            setShowSuccessModal(true);
-            setSearchParams({}); // Limpa URL
-          }
-        } catch (err) { console.error(err); }
-      };
-      verifySession();
-    }
-  }, [searchParams, token, user, updateUser, setSearchParams]);
+    if (searchParams.get('success') !== 'true' || verified.current) return;
+    verified.current = true;
+    (async () => {
+      try {
+        const data = await apiFetch('/api/stripe/verify-session');
+        if (data?.subscribed) {
+          await refreshUser();
+          setWelcome(true);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setSearchParams({}, { replace: true });
+      }
+    })();
+  }, [searchParams, setSearchParams, refreshUser]);
 
-  const handleSubscribe = async () => {
+  const now = new Date();
+  const expiresAt = user?.expires_at ? new Date(user.expires_at) : null;
+  const isAdmin = user?.role === 'admin';
+  const isExpired = !isAdmin && (!expiresAt || expiresAt < now);
+  const isPro = isAdmin || (!!user?.subscribed && !isExpired);
+  const daysLeft = expiresAt && !isExpired ? Math.ceil((expiresAt.getTime() - now.getTime()) / 86_400_000) : 0;
+  const lifetime = expiresAt && expiresAt.getFullYear() - now.getFullYear() > 50;
+
+  const saveName = async () => {
+    if (!user || !name.trim()) return;
+    setSavingName(true);
+    try {
+      await apiFetch('/api/auth/me', { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) });
+      updateUser({ ...user, name: name.trim() });
+      toast.success('Nome atualizado');
+    } catch (err) {
+      toast.error((err as Error).message || 'Não foi possível salvar');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const toggleNotif = async (value: boolean) => {
+    if (!user) return;
+    setSavingNotif(true);
+    try {
+      await apiFetch('/api/auth/me', { method: 'PATCH', body: JSON.stringify({ notificacoes_diarias: value }) });
+      updateUser({ ...user, notificacoes_diarias: value });
+      toast.success(value ? 'Você receberá o aviso diário' : 'Aviso diário desligado');
+    } catch (err) {
+      toast.error((err as Error).message || 'Não foi possível salvar');
+    } finally {
+      setSavingNotif(false);
+    }
+  };
+
+  const toggle2FA = async (enabled: boolean) => {
+    if (!user) return;
+    setSaving2FA(true);
+    try {
+      await apiFetch('/api/auth/set-2fa', { method: 'POST', body: JSON.stringify({ enabled }) });
+      updateUser({ ...user, two_factor_enabled: enabled });
+      toast.success(enabled ? 'Verificação em duas etapas ativada' : 'Verificação em duas etapas desativada');
+    } catch (err) {
+      toast.error((err as Error).message || 'Não foi possível alterar');
+    } finally {
+      setSaving2FA(false);
+    }
+  };
+
+  const subscribe = async () => {
     setSubscribing(true);
     try {
-      const body = cupomMessage?.type === 'success' && cupomMessage.text.includes('checkout') ? { cupom_codigo: cupom } : {};
-      
-      const res = await fetch(API_BASE_URL + '/api/stripe/create-checkout', {
+      const data = await apiFetch('/api/stripe/create-checkout', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify(body)
+        body: JSON.stringify(cupomCheckout ? { cupom_codigo: cupomCheckout } : {}),
       });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
+      if (data?.url) window.location.href = data.url;
+    } catch (err) {
+      toast.error((err as Error).message || 'Não foi possível abrir o pagamento');
       setSubscribing(false);
     }
   };
 
-  const handleApplyCupom = async () => {
-    if (!cupom) return;
-    setApplyingCupom(true);
-    setCupomMessage(null);
+  const applyCupom = async () => {
+    const code = cupom.trim().toUpperCase();
+    if (!code) return;
+    setApplying(true);
+    setCupomMsg(null);
     try {
-      const res = await fetch(API_BASE_URL + '/api/config/aplicar-cupom', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify({ codigo: cupom })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setCupomMessage({ type: 'success', text: data.message });
-        if (data.tipo === '100') {
-          setTimeout(() => window.location.reload(), 1500);
-        }
+      const data = await apiFetch('/api/config/aplicar-cupom', { method: 'POST', body: JSON.stringify({ codigo: code }) });
+      setCupomMsg({ ok: true, text: data.message });
+      if (data.tipo === '100') {
+        await refreshUser();
+        setWelcome(true);
       } else {
-        setCupomMessage({ type: 'error', text: data.error });
+        setCupomCheckout(code);
       }
     } catch (err) {
-      setCupomMessage({ type: 'error', text: 'Erro ao aplicar cupom' });
+      setCupomMsg({ ok: false, text: (err as Error).message || 'Cupom inválido' });
     } finally {
-      setApplyingCupom(false);
+      setApplying(false);
     }
   };
 
-  const handleUpdateProfile = async () => {
-    setUpdating(true);
+  const deleteAccount = async () => {
+    const ok = await confirm({
+      title: 'Excluir sua conta?',
+      description: 'Todos os seus lançamentos, categorias e lembretes serão apagados para sempre. Essa ação não pode ser desfeita.',
+      confirmText: 'Excluir conta',
+      danger: true,
+      requireText: 'EXCLUIR',
+    });
+    if (!ok) return;
     try {
-      const response = await fetch(API_BASE_URL + '/api/auth/me', {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ name, notificacoes_diarias: notificacoesDiarias })
-      });
-
-      if (response.ok) {
-        toast.success('Perfil atualizado com sucesso!');
-        updateUser({ ...user!, name, notificacoes_diarias: notificacoesDiarias });
-      } else {
-        toast.error('Erro ao atualizar perfil');
-      }
+      await apiFetch('/api/auth/me', { method: 'DELETE' });
+      logout();
+      navigate('/');
     } catch (err) {
-      toast.error('Erro de conexão ao salvar');
-    } finally {
-      setUpdating(false);
+      toast.error((err as Error).message || 'Não foi possível excluir a conta');
     }
   };
-
-  const handleDeleteAccount = async () => {
-    setDeleting(true);
-    try {
-      const response = await fetch(API_BASE_URL + '/api/auth/me', {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) { logout(); navigate('/'); }
-    } catch (err) { console.error(err); }
-    finally { setDeleting(false); }
-  };
-
-  const handleToggle2FA = async (enabled: boolean) => {
-    setToggling2FA(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/set-2fa`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ enabled })
-      });
-      if (!response.ok) throw new Error('Erro ao atualizar 2FA');
-      if (user) {
-        updateUser({ ...user, two_factor_enabled: enabled });
-      }
-      toast.success(enabled ? 'Proteção 2FA ativada com sucesso!' : 'Proteção 2FA desativada.');
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao alterar preferência');
-    } finally {
-      setToggling2FA(false);
-    }
-  };
-
-  const now = new Date();
-  const expiresAt = user?.expires_at ? new Date(user.expires_at) : null;
-  const isExpired = user?.role !== 'admin' && expiresAt ? expiresAt < now : false;
-  const daysLeft = expiresAt && !isExpired ? Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 max-w-4xl mx-auto pt-4 md:pt-6 pb-20 space-y-6 md:space-y-8 px-4 sm:px-6">
-      
-      <header className="mb-8 md:mb-12 text-center md:text-left">
-        <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-2 text-white">Configurações</h1>
-        <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-[0.4em]">Gerenciamento de Conta</p>
-      </header>
+    <div className="space-y-6 lg:space-y-8">
+      <PageHeader title="Configurações" description="Conta, segurança e assinatura." />
 
-      {(isExpired || searchParams.get('expired')) && (
-        <div className="bg-[#FF4D4D]/10 border border-[#FF4D4D]/20 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 md:gap-8 animate-in slide-in-from-top-4 duration-500 text-center md:text-left">
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-[#FF4D4D]/20 rounded-2xl flex items-center justify-center shrink-0">
-            <AlertTriangle className="text-[#FF4D4D] w-6 h-6 md:w-8 md:h-8" />
+      {isExpired && (
+        <div className="flex flex-col gap-4 rounded-2xl border border-neg/25 bg-neg/8 p-5 sm:flex-row sm:items-center">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neg/15 text-neg"><TriangleAlert size={21} /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-fg">Seu acesso expirou</p>
+            <p className="mt-0.5 text-sm text-muted">Assine o Lyonk Pro para voltar a usar o painel. Seus dados continuam guardados.</p>
           </div>
-          <div className="flex-1">
-            <h3 className="text-xl md:text-2xl font-black text-white mb-2 tracking-tight">Sua assinatura expirou! 🛡️</h3>
-            <p className="text-sm md:text-base text-zinc-500 font-medium">Seu acesso às ferramentas de gestão foi bloqueado. Renove sua assinatura para continuar controlando suas finanças com Lyonk Premium.</p>
-          </div>
-          <button 
-            onClick={handleSubscribe}
-            className="w-full md:w-auto px-8 py-4 bg-[#FF4D4D] text-white font-black rounded-2xl hover:scale-105 transition-all shadow-[0_10px_30px_rgba(255,77,77,0.3)]"
-          >
-            ASSINAR
-          </button>
+          <Button onClick={subscribe} isLoading={subscribing} className="w-full sm:w-auto"><Sparkles size={17} /> Assinar agora</Button>
         </div>
       )}
 
-      {/* Perfil do Usuário */}
-      <section className="bg-[#15151A] border border-white/5 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
-        <div className="hidden md:block absolute top-0 right-0 w-64 h-64 bg-[#a3ff12]/5 blur-[100px] rounded-full -mr-32 -mt-32 transition-all group-hover:bg-[#a3ff12]/10" />
-        
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-8 md:mb-10 relative z-10 text-center md:text-left">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shrink-0">
-            <User size={24} className="text-[#a3ff12]" />
+      <Section title="Perfil" description="Como você aparece no app.">
+        <div className="space-y-4 p-4 sm:p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" />
+            <Input label="E-mail de acesso" value={user?.email ?? ''} disabled readOnly />
           </div>
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Seu Perfil</h2>
-            <p className="text-[10px] md:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">Informações Pessoais</p>
+          <div className="flex justify-end">
+            <Button onClick={saveName} isLoading={savingName} disabled={!name.trim() || name.trim() === user?.name}>Salvar nome</Button>
           </div>
         </div>
+      </Section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Nome de Exibição</label>
-            <input 
-              type="text" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#a3ff12] transition-all" 
-            />
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">E-mail (Login)</label>
-            <input type="email" defaultValue={user?.email} disabled className="w-full bg-black/20 border border-white/5 rounded-2xl px-6 py-4 text-zinc-600 font-bold cursor-not-allowed" />
-          </div>
+      <Section title="Preferências">
+        <div className="divide-y divide-line">
+          <Row
+            icon={BellRing}
+            title="Aviso diário por e-mail"
+            description="Às 8h, quando houver contas vencendo no dia."
+            control={<Switch checked={user?.notificacoes_diarias ?? true} onChange={toggleNotif} disabled={savingNotif} label="Aviso diário por e-mail" />}
+          />
+          <Row
+            icon={Moon}
+            title="Tema escuro"
+            control={<Switch checked={theme === 'dark'} onChange={toggleTheme} label="Tema escuro" />}
+          />
         </div>
-        
-        <div className="mt-8 bg-black/40 border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 text-center md:text-left">
-          <div>
-            <h3 className="text-xl font-black text-white mb-2">Notificações Diárias</h3>
-            <p className="text-sm text-zinc-400">Receba um e-mail diário avisando sobre contas que vencem no dia atual.</p>
-          </div>
-          <button 
-            onClick={() => setNotificacoesDiarias(!notificacoesDiarias)}
-            className={`w-full md:w-auto px-8 py-4 font-black rounded-2xl transition-all flex items-center justify-center gap-3 ${notificacoesDiarias ? 'bg-[#a3ff12] text-black hover:scale-105 shadow-[0_10px_30px_rgba(163,255,18,0.2)]' : 'bg-white/5 text-zinc-500 hover:text-white border border-white/10 hover:border-white/20'}`}
-          >
-            {notificacoesDiarias ? 'ATIVADO' : 'DESATIVADO'}
-          </button>
-        </div>
+      </Section>
 
-        <button 
-          onClick={handleUpdateProfile}
-          disabled={updating}
-          className="mt-8 md:mt-10 px-8 md:px-10 py-4 md:py-5 w-full md:w-auto bg-[#a3ff12] text-black font-black rounded-2xl hover:scale-105 transition-all shadow-2xl flex items-center justify-center md:justify-start gap-3 disabled:opacity-50"
-        >
-          {updating ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-          SALVAR ALTERAÇÕES
-        </button>
-      </section>
+      <Section title="Segurança">
+        <Row
+          icon={KeyRound}
+          title="Verificação em duas etapas"
+          description="Pede um código enviado ao seu e-mail a cada login."
+          control={<Switch checked={!!user?.two_factor_enabled} onChange={toggle2FA} disabled={saving2FA} label="Verificação em duas etapas" />}
+        />
+      </Section>
 
-      {/* Segurança */}
-      <section className="bg-[#15151A] border border-white/5 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-8 relative z-10 text-center md:text-left">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#a3ff12]/10 flex items-center justify-center border border-[#a3ff12]/20 shrink-0">
-            <ShieldCheck size={24} className="text-[#a3ff12]" />
-          </div>
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Segurança</h2>
-            <p className="text-[10px] md:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">Autenticação e Senha</p>
-          </div>
-        </div>
-
-        <div className="bg-black/40 border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 text-center md:text-left mb-8">
-          <div>
-            <h3 className="text-xl font-black text-white mb-2">Autenticação em Duas Etapas (2FA)</h3>
-            <p className="text-sm text-zinc-400">Receba um código de 6 dígitos no seu e-mail sempre que fizer login para garantir que só você acesse a conta.</p>
-          </div>
-          <button 
-            onClick={() => handleToggle2FA(!user?.two_factor_enabled)}
-            disabled={toggling2FA}
-            className={`w-full md:w-auto px-8 py-4 font-black rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${user?.two_factor_enabled ? 'bg-white/5 text-[#FF4D4D] hover:bg-[#FF4D4D]/10 border border-[#FF4D4D]/20' : 'bg-[#a3ff12] text-black hover:scale-105 shadow-[0_10px_30px_rgba(163,255,18,0.2)]'}`}
-          >
-            {toggling2FA ? <Loader2 className="animate-spin" size={20} /> : user?.two_factor_enabled ? 'DESATIVAR 2FA' : 'ATIVAR 2FA'}
-          </button>
-        </div>
-
-      </section>
-
-      {/* Assinatura */}
-      <section className="bg-gradient-to-br from-[#1C1C21] to-[#15151A] border border-white/5 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden group shadow-2xl">
-        <div className="hidden md:block absolute top-0 right-0 w-64 h-64 bg-[#a3ff12]/5 blur-[100px] rounded-full -mr-32 -mt-32" />
-        
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-8 md:mb-10 relative z-10 text-center md:text-left">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#a3ff12]/10 flex items-center justify-center border border-[#a3ff12]/20 shrink-0">
-            <CreditCard size={24} className="text-[#a3ff12]" />
-          </div>
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Lyonk Premium</h2>
-            <p className="text-[10px] md:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">Plano e Pagamento</p>
-          </div>
-        </div>
-        
-        <div className="bg-black/40 border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 relative z-10 text-center md:text-left">
-          {(user?.role === 'admin' || (user?.subscribed && !isExpired)) ? (
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 w-full">
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#a3ff12]/20 flex items-center justify-center text-[#a3ff12] border border-[#a3ff12]/30 shadow-[0_0_20px_rgba(163,255,18,0.2)] shrink-0">
-                <CheckCircle2 size={32} />
+      <Section title="Assinatura" description="Plano e pagamento.">
+        <div className="p-4 sm:p-5">
+          <div className="flex items-start gap-4">
+            <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', isPro ? 'bg-brand/14 text-brand' : 'bg-elevated text-muted')}>
+              <Crown size={21} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[15px] font-semibold text-fg">Lyonk Pro</p>
+                {isAdmin ? <Badge tone="brand">Administrador</Badge>
+                  : isPro ? <Badge tone="pos">Ativa</Badge>
+                  : isExpired ? <Badge tone="neg">Expirada</Badge>
+                  : <Badge tone="info">Teste grátis</Badge>}
               </div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-black text-white mb-1">Você é PRO!</h3>
-                <p className="text-xs md:text-sm text-[#a3ff12] font-black uppercase tracking-widest">Sua assinatura está ativa</p>
-                {user?.role === 'admin' ? (
-                  <p className="text-[10px] md:text-xs text-zinc-500 mt-2 font-bold uppercase tracking-widest">ACESSO VITALÍCIO (ADMIN)</p>
-                ) : user?.expires_at ? (
-                  <p className="text-[10px] md:text-xs text-zinc-500 mt-2">Expira em {new Date(user.expires_at).toLocaleDateString('pt-BR')}</p>
-                ) : null}
-              </div>
+              <p className="mt-1 text-sm text-muted">
+                {isAdmin ? 'Acesso completo de administrador.'
+                  : isPro ? (lifetime ? 'Acesso liberado por cupom.' : `Válida até ${expiresAt?.toLocaleDateString('pt-BR')}.`)
+                  : isExpired ? 'Assine para voltar a usar todos os recursos.'
+                  : `${daysLeft} ${daysLeft === 1 ? 'dia restante' : 'dias restantes'} de teste.`}
+              </p>
             </div>
-          ) : (
-            <>
-              <div className="flex-1">
-                <div className="inline-flex px-3 py-1 bg-[#a3ff12]/10 text-[#a3ff12] rounded-lg text-[10px] font-black uppercase tracking-widest mb-3">CONTA GRATUITA</div>
-                <h3 className="text-xl md:text-2xl font-black text-white mb-1">Passaporte Premium</h3>
-                <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">Libere todo o potencial do Lyonk e controle seu futuro financeiro sem limites.</p>
-                
-                {expiresAt && !isExpired && (
-                  <div className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10 inline-block w-full md:w-auto">
-                    <p className="text-sm text-[#a3ff12] font-black">
-                      ⏱️ {daysLeft} {daysLeft === 1 ? 'dia restante' : 'dias restantes'} de teste gratuito
-                    </p>
-                  </div>
-                )}
-                
-                {/* Cupons */}
-                <div className="mt-4">
-                  <p className="text-[10px] md:text-xs text-zinc-500 font-bold uppercase tracking-widest mb-2">Possui um cupom?</p>
-                  <div className="flex items-center gap-2 max-w-sm">
-                    <input 
-                      value={cupom}
-                      onChange={e => setCupom(e.target.value.toUpperCase())}
-                      placeholder="CÓDIGO"
-                      className="flex-1 bg-black/40 border border-[#a3ff12]/10 rounded-xl py-3 px-4 text-white font-black text-sm uppercase focus:border-[#a3ff12] outline-none transition-all"
-                    />
-                    <button 
-                      onClick={handleApplyCupom}
-                      disabled={applyingCupom || !cupom}
-                      className="px-4 py-3 bg-[#a3ff12]/10 text-[#a3ff12] font-black rounded-xl hover:bg-[#a3ff12] hover:text-black transition-all disabled:opacity-50 disabled:grayscale"
-                    >
-                      {applyingCupom ? <Loader2 className="animate-spin" size={18}/> : 'APLICAR'}
-                    </button>
-                  </div>
-                  {cupomMessage && (
-                    <p className={`text-xs mt-2 font-bold ${cupomMessage.type === 'error' ? 'text-[#FF4D4D]' : 'text-[#a3ff12]'}`}>
-                      {cupomMessage.text}
-                    </p>
-                  )}
-                </div>
+          </div>
 
+          {!isPro && (
+            <div className="mt-5 space-y-4 border-t border-line pt-5">
+              <div className="flex items-end gap-2">
+                <Input
+                  label="Cupom de desconto"
+                  value={cupom}
+                  onChange={(e) => setCupom(e.target.value.toUpperCase())}
+                  placeholder="CÓDIGO"
+                  leftIcon={<Ticket size={17} />}
+                  autoCapitalize="characters"
+                  className="uppercase"
+                />
+                <Button variant="secondary" size="lg" onClick={applyCupom} isLoading={applying} disabled={!cupom.trim()}>Aplicar</Button>
               </div>
-              <button 
-                onClick={handleSubscribe}
-                disabled={subscribing}
-                className="w-full md:w-auto px-8 md:px-10 py-4 md:py-5 bg-[#635BFF] hover:bg-[#635BFF]/90 text-white font-black rounded-2xl transition-all shadow-[0_10px_30px_rgba(99,91,255,0.3)] flex items-center justify-center gap-3 disabled:opacity-50 shrink-0 mt-4 md:mt-0"
-              >
-                {subscribing ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-                ASSINAR
-              </button>
-            </>
+              {cupomMsg && <p className={cn('text-sm font-medium', cupomMsg.ok ? 'text-pos' : 'text-neg')}>{cupomMsg.text}</p>}
+              <Button size="lg" fullWidth onClick={subscribe} isLoading={subscribing}>
+                <Sparkles size={18} /> Assinar o Lyonk Pro
+              </Button>
+              <p className="text-center text-xs text-subtle">Pagamento seguro pela Stripe. Cancele quando quiser.</p>
+            </div>
           )}
         </div>
-      </section>
+      </Section>
 
-      {/* Zona de Perigo */}
-      <section className="bg-[#FF4D4D]/5 border border-[#FF4D4D]/20 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-8 md:mb-10 text-center md:text-left">
-          <div className="w-12 h-12 md:w-14 h-14 rounded-2xl bg-[#FF4D4D]/10 flex items-center justify-center border border-[#FF4D4D]/20 shrink-0">
-            <AlertTriangle size={24} className="text-[#FF4D4D]" />
-          </div>
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Zona de Perigo</h2>
-            <p className="text-[10px] md:text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">Ações Irreversíveis</p>
-          </div>
+      <Section title="Conta">
+        <div className="divide-y divide-line">
+          <Row
+            icon={LogOut}
+            title="Sair da conta"
+            description="Encerra a sessão neste aparelho."
+            control={<Button variant="secondary" size="sm" onClick={() => { logout(); navigate('/'); }}>Sair</Button>}
+          />
+          <Row
+            icon={Trash2}
+            title={<span className="text-neg">Excluir conta</span>}
+            description="Apaga todos os seus dados de forma permanente."
+            control={<Button variant="danger-soft" size="sm" onClick={deleteAccount}>Excluir</Button>}
+          />
         </div>
+      </Section>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 md:p-8 bg-black/40 border border-[#FF4D4D]/10 rounded-3xl text-center md:text-left">
-          <div className="flex-1">
-            <p className="font-black text-white text-lg md:text-xl mb-1">Apagar todos os dados</p>
-            <p className="text-xs md:text-sm text-zinc-500 font-medium leading-relaxed">Isso removerá permanentemente seu histórico financeiro.</p>
-          </div>
-          <button 
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="w-full md:w-auto px-6 md:px-8 py-4 bg-[#FF4D4D]/10 text-[#FF4D4D] hover:bg-[#FF4D4D] hover:text-white border border-[#FF4D4D]/30 rounded-xl font-black transition-all flex items-center justify-center gap-2 shrink-0"
-          >
-            <Trash2 size={20} /> DELETAR CONTA
-          </button>
+      <Sheet open={welcome} onClose={() => setWelcome(false)} size="sm" bare>
+        <div className="pt-4 text-center sm:pt-6">
+          <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-pos/12 text-pos"><CircleCheck size={28} /></span>
+          <h2 className="text-lg font-semibold text-fg">Assinatura confirmada</h2>
+          <p className="mx-auto mt-2 max-w-sm text-[15px] text-muted">Seu acesso ao Lyonk Pro está liberado. Bom controle!</p>
+          <Button size="lg" fullWidth className="mt-6" onClick={() => { setWelcome(false); navigate('/dashboard'); }}>Ir para o início</Button>
         </div>
-      </section>
-
-      {/* Modal Deletar */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setIsDeleteModalOpen(false)} />
-          <div className="bg-[#15151A] border border-[#FF4D4D]/30 rounded-[3rem] w-full max-w-md p-10 relative z-10 shadow-2xl animate-in zoom-in duration-300">
-            <div className="w-20 h-20 bg-[#FF4D4D]/10 text-[#FF4D4D] rounded-full flex items-center justify-center mx-auto mb-8">
-              <AlertTriangle size={40} />
-            </div>
-            <h2 className="text-3xl font-black text-white text-center mb-3">Tem certeza?</h2>
-            <p className="text-zinc-500 text-center mb-10 font-medium">Essa ação não pode ser desfeita. Todos os seus lançamentos serão perdidos para sempre.</p>
-            
-            <div className="space-y-4">
-              <button onClick={handleDeleteAccount} disabled={deleting} className="w-full py-5 bg-[#FF4D4D] text-white font-black rounded-2xl flex items-center justify-center gap-2">
-                {deleting ? <Loader2 className="animate-spin" /> : 'SIM, DELETAR TUDO'}
-              </button>
-              <button onClick={() => setIsDeleteModalOpen(false)} className="w-full py-5 bg-white/5 text-white font-black rounded-2xl">CANCELAR</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Modal de Sucesso Premium */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#18181B] border border-[#a3ff12]/30 w-full max-w-md rounded-3xl p-8 text-center shadow-[0_0_50px_-12px_rgba(163,255,18,0.3)] animate-in zoom-in-95 duration-300">
-            <div className="w-20 h-20 bg-[#a3ff12] rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(163,255,18,0.5)]">
-              <PartyPopper size={40} className="text-black" />
-            </div>
-            
-            <h2 className="text-3xl font-bold text-white mb-2">Bem-vindo ao Pro!</h2>
-            <p className="text-[#a1a1aa] mb-8">
-              Sua assinatura foi confirmada. Agora você tem acesso ilimitado a todos os recursos premium do Lyonk.
-            </p>
-            
-            <div className="space-y-4">
-              <div className="bg-[#27272A] p-4 rounded-2xl flex items-center gap-4 text-left border border-white/5">
-                <div className="bg-[#a3ff12]/10 p-2 rounded-xl">
-                  <Sparkles size={20} className="text-[#a3ff12]" />
-                </div>
-                <div>
-                  <div className="text-white font-semibold">Recursos Desbloqueados</div>
-                  <div className="text-xs text-[#71717a]">Relatórios detalhados, metas e suporte.</div>
-                </div>
-              </div>
-            </div>
-            
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full mt-8 bg-[#a3ff12] hover:bg-[#befd5c] text-black font-bold py-4 rounded-2xl transition-all shadow-[0_10px_20px_-10px_rgba(163,255,18,0.5)] active:scale-95"
-            >
-              Vamos começar
-            </button>
-          </div>
-        </div>
-      )}
+      </Sheet>
     </div>
   );
 }

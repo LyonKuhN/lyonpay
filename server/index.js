@@ -87,13 +87,19 @@ const app = express();
 // Necessário para o Coolify/Docker (Proxy Reverso) identificar o IP real do usuário
 app.set('trust proxy', 1);
 
-const allowedOrigins = process.env.SERVICE_FQDN_LYONPAY_WEB 
-  ? [`https://${process.env.SERVICE_FQDN_LYONPAY_WEB}`, `http://${process.env.SERVICE_FQDN_LYONPAY_WEB}`] 
+const allowedOrigins = process.env.SERVICE_FQDN_LYONPAY_WEB
+  ? [`https://${process.env.SERVICE_FQDN_LYONPAY_WEB}`, `http://${process.env.SERVICE_FQDN_LYONPAY_WEB}`]
   : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+// Em desenvolvimento (sem domínio de produção): qualquer porta do localhost e IPs da rede local,
+// para o Vite em 5174+ e para testar pelo celular na mesma Wi-Fi.
+const devOrigin = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/;
+const isAllowedOrigin = (origin) =>
+  allowedOrigins.includes(origin) || (!process.env.SERVICE_FQDN_LYONPAY_WEB && devOrigin.test(origin));
 
 app.use(cors({
   origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Bloqueado por CORS'));
@@ -122,7 +128,8 @@ const authLimiter = rateLimit({
 });
 
 app.use('/api/', limiter); 
-app.use(express.json());
+// O webhook da Stripe valida a assinatura sobre o corpo cru; o JSON global o estragava.
+app.use((req, res, next) => (req.originalUrl === '/api/stripe/webhook' ? next() : express.json()(req, res, next)));
 
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -589,6 +596,29 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
   }
 });
 
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, email, role, two_factor_enabled FROM auth.users WHERE id = $1', [req.user.id]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const profile = await pool.query('SELECT display_name, notificacoes_diarias FROM public.profiles WHERE user_id = $1', [user.id]);
+    const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [user.id]);
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: profile.rows[0]?.display_name || 'Usuário',
+      role: user.role,
+      subscribed: sub.rows[0]?.subscribed || false,
+      expires_at: sub.rows[0]?.expires_at,
+      two_factor_enabled: user.two_factor_enabled,
+      notificacoes_diarias: profile.rows[0]?.notificacoes_diarias,
+    });
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.patch('/api/auth/me', authenticateToken, async (req, res) => {
   const { name, notificacoes_diarias } = req.body;
   try {
@@ -691,6 +721,21 @@ app.post('/api/receitas', authenticateToken, async (req, res) => {
   }
 });
 
+app.put('/api/receitas/:id', authenticateToken, async (req, res) => {
+  const { descricao, valor, data_recebimento, categoria } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE public.receitas SET descricao = $1, valor = $2, data_recebimento = $3, categoria = $4 WHERE id = $5 AND user_id = $6 RETURNING *',
+      [descricao, valor, data_recebimento, categoria || 'Outros', req.params.id, req.user.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Receita não encontrada' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(`ERRO em ${req.method} ${req.url}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.patch('/api/receitas/:id/valor', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -787,8 +832,9 @@ app.post('/api/despesas', authenticateToken, async (req, res) => {
         if (useCustom) {
           currentVencimento = datas_personalizadas[i];
         } else {
-          // Criar a data baseada nos componentes e adicionar os meses
-          const date = new Date(year, (month - 1) + i, day);
+          // Mesmo dia nos meses seguintes; se o mês for mais curto, o último dia dele
+          const date = new Date(year, (month - 1) + i, 1);
+          date.setDate(Math.min(day, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()));
           
           // Ajustar para o formato YYYY-MM-DD para salvar no banco corretamente como DATE
           const y = date.getFullYear();
@@ -895,7 +941,8 @@ app.post('/api/despesas/gerar-fixas', authenticateToken, async (req, res) => {
         return res.status(409).json({ error: 'As despesas já foram geradas para o mês, gostaria de substituir?', promptReplace: true });
       }
     } else {
-      await pool.query(`DELETE FROM public.despesas WHERE user_id = $1 AND EXTRACT(MONTH FROM data_vencimento) = $2 AND EXTRACT(YEAR FROM data_vencimento) = $3 AND is_modelo = false AND tipo = 'fixa'`, [req.user.id, parseInt(month), parseInt(year)]);
+      // Recria só as pendentes: as fixas já pagas do mês ficam como estão
+      await pool.query(`DELETE FROM public.despesas WHERE user_id = $1 AND EXTRACT(MONTH FROM data_vencimento) = $2 AND EXTRACT(YEAR FROM data_vencimento) = $3 AND is_modelo = false AND tipo = 'fixa' AND pago = false`, [req.user.id, parseInt(month), parseInt(year)]);
     }
 
     let createdCount = 0;
@@ -910,7 +957,9 @@ app.post('/api/despesas/gerar-fixas', authenticateToken, async (req, res) => {
       
       const exists = await pool.query(`SELECT id FROM public.despesas WHERE user_id = $1 AND descricao = $2 AND EXTRACT(MONTH FROM data_vencimento) = $3 AND EXTRACT(YEAR FROM data_vencimento) = $4 AND is_modelo = false`, [req.user.id, modelo.descricao, parseInt(month), parseInt(year)]);
       if (exists.rows.length === 0) {
-        const novaData = new Date(year, month - 1, new Date(modelo.data_vencimento).getDate());
+        const ultimoDia = new Date(year, month, 0).getDate();
+        const dia = Math.min(new Date(modelo.data_vencimento).getDate(), ultimoDia);
+        const novaData = `${year}-${String(month).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
         await pool.query(`INSERT INTO public.despesas (user_id, descricao, valor, data_vencimento, tipo, observacoes, is_modelo, categoria) VALUES ($1, $2, $3, $4, $5, $6, false, $7)`, [req.user.id, modelo.descricao, finalValor, novaData, 'fixa', modelo.observacoes, modelo.categoria]);
         createdCount++;
       }
@@ -1040,6 +1089,17 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) { return res.status(400).send(`Webhook Error: ${err.message}`); }
 
+  if (event.type === 'invoice.paid') {
+    const invoice = event.data.object;
+    const periodEnd = invoice.lines?.data?.[0]?.period?.end;
+    if (invoice.customer_email && periodEnd) {
+      await pool.query(
+        `UPDATE public.subscribers SET subscribed = true, subscription_tier = 'pro', expires_at = to_timestamp($2) WHERE email = $1`,
+        [invoice.customer_email, periodEnd]
+      );
+    }
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const user_id = session.metadata.user_id;
@@ -1058,9 +1118,9 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 // Fallback para verificar sessão sem webhook (útil localmente)
 app.get('/api/stripe/verify-session', authenticateToken, async (req, res) => {
   try {
-    const sub = await pool.query('SELECT subscribed FROM public.subscribers WHERE user_id = $1', [req.user.id]);
+    const sub = await pool.query('SELECT subscribed, expires_at FROM public.subscribers WHERE user_id = $1', [req.user.id]);
     if (sub.rows[0]?.subscribed) {
-      return res.json({ subscribed: true });
+      return res.json({ subscribed: true, expires_at: sub.rows[0].expires_at });
     }
     
     // Se não está no banco, talvez o webhook não chegou (local). 

@@ -1,17 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
+import { CircleCheck, CircleX, LoaderCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { AuthCard } from '../components/layout/AuthCard';
 
 export default function Verify() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Verificando seu e-mail...');
+  const [message, setMessage] = useState('Confirmando seu e-mail…');
   const { login } = useAuth();
   const navigate = useNavigate();
-
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -21,31 +21,24 @@ export default function Verify() {
     const verifyToken = async () => {
       if (!token) {
         setStatus('error');
-        setMessage('Token de verificação ausente.');
+        setMessage('O link de confirmação está incompleto.');
         return;
       }
-
       try {
         const response = await fetch(API_BASE_URL + '/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
+          body: JSON.stringify({ token }),
         });
-
         const data = await response.json();
-
-        if (!response.ok) throw new Error(data.error || 'Erro na verificação');
-
+        if (!response.ok) throw new Error(data.error || 'Não foi possível confirmar o e-mail');
         login(data.token, data.user);
         setStatus('success');
-        setMessage('E-mail verificado com sucesso!');
-        
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 3000);
-      } catch (err: any) {
+        setMessage('E-mail confirmado');
+        setTimeout(() => navigate('/dashboard'), 2500);
+      } catch (err) {
         setStatus('error');
-        setMessage(err.message);
+        setMessage((err as Error).message);
       }
     };
 
@@ -53,28 +46,25 @@ export default function Verify() {
   }, [token, login, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#09090B] flex items-center justify-center p-6">
-      <div className="bg-[#15151A] border border-white/10 rounded-[3rem] p-12 w-full max-w-md text-center shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-[#a3ff12]/5 blur-[100px] rounded-full pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col items-center">
-          {status === 'loading' && <Loader2 className="animate-spin text-[#a3ff12] mb-6" size={60} />}
-          {status === 'success' && <CheckCircle2 className="text-[#a3ff12] mb-6 animate-in zoom-in duration-500" size={60} />}
-          {status === 'error' && <XCircle className="text-[#FF4D4D] mb-6 animate-in zoom-in duration-500" size={60} />}
-          
-          <h1 className="text-2xl font-bold text-white mb-4">{message}</h1>
-          
-          {status === 'success' && (
-            <p className="text-zinc-500 mb-8">Você será redirecionado para o dashboard em alguns segundos...</p>
-          )}
-
-          {status === 'error' && (
-            <Link to="/" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-full hover:bg-white/10 transition-all">
-              Voltar para Início <ArrowRight size={18} />
-            </Link>
-          )}
-        </div>
+    <AuthCard>
+      <div className="flex flex-col items-center text-center">
+        <span className={
+          status === 'error' ? 'mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-neg/12 text-neg'
+            : status === 'success' ? 'mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-pos/12 text-pos'
+            : 'mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/12 text-brand'
+        }>
+          {status === 'loading' && <LoaderCircle size={28} className="animate-spin" />}
+          {status === 'success' && <CircleCheck size={28} />}
+          {status === 'error' && <CircleX size={28} />}
+        </span>
+        <h1 className="text-xl font-semibold text-fg">{message}</h1>
+        {status === 'success' && <p className="mt-2 text-[15px] text-muted">Abrindo o seu painel…</p>}
+        {status === 'error' && (
+          <Link to="/" className="mt-6 flex h-12 w-full items-center justify-center rounded-xl border border-line-strong text-[15px] font-semibold text-fg hover:bg-elevated">
+            Voltar para o início
+          </Link>
+        )}
       </div>
-    </div>
+    </AuthCard>
   );
 }

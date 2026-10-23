@@ -33,16 +33,16 @@ export function SkewCard({ step, title, desc, icon, gradientFrom, gradientTo }: 
       </span>
 
       {/* Content */}
-      <div className="relative z-20 h-full p-[40px] bg-[#161616]/90 backdrop-blur-[10px] border border-[#333333] group-hover:border-transparent rounded-[16px] text-white transition-all duration-500 group-hover:left-[-10px] group-hover:p-[50px_40px] flex flex-col justify-between">
+      <div className="relative z-20 h-full p-[40px] bg-surface/90 backdrop-blur-[10px] border border-line-strong group-hover:border-transparent rounded-[16px] text-white transition-all duration-500 group-hover:left-[-10px] group-hover:p-[50px_40px] flex flex-col justify-between">
         <div>
-          <div className="absolute top-6 right-6 text-4xl font-bold text-[#FCFCFC]/10 select-none group-hover:text-white/20 transition-colors">
+          <div className="absolute top-6 right-6 text-4xl font-bold text-fg/10 select-none group-hover:text-white/20 transition-colors">
             {step}
           </div>
-          <div className="w-12 h-12 rounded-[12px] bg-[#D7FF67]/15 flex items-center justify-center text-[#D7FF67] mb-6 group-hover:bg-white/20 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-[12px] bg-brand/15 flex items-center justify-center text-brand mb-6 group-hover:bg-white/20 group-hover:text-white transition-colors">
             {icon}
           </div>
-          <h3 className="text-xl font-bold text-[#FCFCFC] mb-3">{title}</h3>
-          <p className="text-[#888888] leading-relaxed text-sm group-hover:text-white/90 transition-colors">{desc}</p>
+          <h3 className="text-xl font-bold text-fg mb-3">{title}</h3>
+          <p className="text-muted leading-relaxed text-sm group-hover:text-white/90 transition-colors">{desc}</p>
         </div>
       </div>
     </div>

@@ -14,4 +14,9 @@ const pool = new Pool({
   ssl: false // Geralmente para IPs diretos sem SSL configurado
 });
 
+// Sem este ouvinte, uma conexão ociosa derrubada pelo banco encerra o processo do Node.
+pool.on('error', (err) => {
+  console.error('[DB] Erro em conexão ociosa do pool:', err.message);
+});
+
 export default pool;

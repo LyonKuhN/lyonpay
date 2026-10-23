@@ -1,8 +1,11 @@
 import { API_BASE_URL } from '../config/api';
 
+/** Erro da API com os campos extras que o servidor devolve (ex.: promptReplace). */
+export type ApiError = Error & Record<string, unknown>;
+
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('lyonk_token');
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -20,15 +23,15 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       window.dispatchEvent(new CustomEvent('session-expired'));
     }
     let errorMsg = response.statusText;
-    let extraData: any = {};
+    let extraData: Record<string, unknown> = {};
     try {
       const errorData = await response.json();
       errorMsg = errorData.error || errorData.message || errorMsg;
       extraData = errorData;
-    } catch (e) {
+    } catch {
       // Ignora erro de parse de JSON caso não tenha corpo de erro
     }
-    const err: any = new Error(errorMsg);
+    const err = new Error(errorMsg) as ApiError;
     Object.assign(err, extraData);
     throw err;
   }

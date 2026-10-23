@@ -1,34 +1,53 @@
 import React, { forwardRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
+import { cn } from '../../lib/cn';
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-soft';
+type Size = 'sm' | 'md' | 'lg' | 'icon' | 'icon-sm';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: Variant;
+  size?: Size;
   isLoading?: boolean;
+  fullWidth?: boolean;
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', isLoading, children, disabled, ...props }, ref) => {
-    
-    const baseStyle = "flex items-center justify-center gap-2 font-black rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none";
-    
-    const variants = {
-      primary: "bg-[#a3ff12] text-black hover:scale-[1.02] shadow-xl py-3.5 px-6",
-      secondary: "bg-white/5 text-white border border-white/10 hover:border-white/20 py-3.5 px-6",
-      danger: "bg-[#FF4D4D] text-white hover:bg-[#FF4D4D]/90 py-3.5 px-6 shadow-xl",
-      ghost: "bg-transparent text-zinc-500 hover:text-white p-2"
-    };
+const VARIANTS: Record<Variant, string> = {
+  primary: 'bg-brand text-on-brand hover:bg-brand-soft shadow-[0_1px_0_rgb(255_255_255/0.15)_inset]',
+  secondary: 'bg-surface text-fg border border-line-strong hover:bg-elevated',
+  ghost: 'text-muted hover:text-fg hover:bg-elevated',
+  danger: 'bg-neg text-white hover:opacity-90',
+  'danger-soft': 'bg-neg/10 text-neg hover:bg-neg/15',
+};
 
-    return (
-      <button
-        ref={ref}
-        disabled={isLoading || disabled}
-        className={`${baseStyle} ${variants[variant]} ${className}`}
-        {...props}
-      >
-        {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : children}
-      </button>
-    );
-  }
+const SIZES: Record<Size, string> = {
+  sm: 'h-9 px-3 text-[13px] gap-1.5',
+  md: 'h-11 px-4 text-sm gap-2',
+  lg: 'h-12 px-5 text-[15px] gap-2',
+  icon: 'h-10 w-10',
+  'icon-sm': 'h-9 w-9',
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant = 'primary', size = 'md', isLoading, fullWidth, children, disabled, type = 'button', ...props }, ref) => (
+    <button
+      ref={ref}
+      type={type}
+      disabled={isLoading || disabled}
+      className={cn(
+        'relative inline-flex shrink-0 select-none items-center justify-center rounded-xl font-semibold whitespace-nowrap',
+        'transition-[background-color,color,border-color,opacity,transform] duration-150 active:scale-[0.98]',
+        'disabled:opacity-50 disabled:pointer-events-none',
+        VARIANTS[variant],
+        SIZES[size],
+        fullWidth && 'w-full',
+        className,
+      )}
+      {...props}
+    >
+      {isLoading ? <LoaderCircle className="h-[18px] w-[18px] animate-spin" /> : children}
+    </button>
+  ),
 );
 
 Button.displayName = 'Button';

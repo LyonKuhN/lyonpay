@@ -1,274 +1,166 @@
-import { useState, useEffect } from 'react';
-import { Users, TrendingUp, ShieldCheck, Save, Loader2, ArrowRight, Star, Ticket, Plus, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
+import { Crown, Search, ShieldCheck, Ticket, Trash2, TrendingUp, Users } from 'lucide-react';
+import { apiFetch } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { useConfirm } from '../components/ui/confirm';
+import { Button } from '../components/ui/button';
+import { Input, MoneyInput } from '../components/ui/input';
+import { Badge, Card, CardHeader, EmptyState, IconTile, PageHeader, Skeleton } from '../components/ui/primitives';
+import { formatBRL, parseMoney, toMoneyInput } from '../lib/format';
+
+interface Stats { totalUsers?: number | string; proUsers?: number | string; globalVolume?: number | string; monthlyFee?: number | string }
+interface AdminUser { id: string; email: string; display_name?: string; role: string; created_at: string; is_pro?: boolean }
+interface Cupom { id: string; codigo: string; desconto_percentual: number | string; max_usos?: number | null; usos_atuais?: number }
 
 export default function Admin() {
   const { token } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
-  const [cupons, setCupons] = useState<any[]>([]);
-  const [newFee, setNewFee] = useState('');
-  const [updatingFee, setUpdatingFee] = useState(false);
-  const [newCupom, setNewCupom] = useState({ codigo: '', desconto: '', max_usos: '' });
-  const [creatingCupom, setCreatingCupom] = useState(false);
+  const qc = useQueryClient();
+  const confirm = useConfirm();
+  const [userQuery, setUserQuery] = useState('');
+  const [fee, setFee] = useState<string | null>(null);
+  const [novo, setNovo] = useState({ codigo: '', desconto: '', max: '' });
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const [resStats, resUsers, resCupons] = await Promise.all([
-        fetch(API_BASE_URL + '/api/admin/stats', { headers }),
-        fetch(API_BASE_URL + '/api/admin/users', { headers }),
-        fetch(API_BASE_URL + '/api/admin/cupons', { headers })
-      ]);
-      const dataStats = await resStats.json();
-      const dataUsers = await resUsers.json();
-      const dataCupons = await resCupons.json();
-      setStats(dataStats);
-      setUsers(Array.isArray(dataUsers) ? dataUsers : []);
-      setCupons(Array.isArray(dataCupons) ? dataCupons : []);
-      setNewFee(dataStats.monthlyFee || '');
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
+  const statsQ = useQuery({ queryKey: ['admin', 'stats'], queryFn: () => apiFetch('/api/admin/stats') as Promise<Stats>, enabled: !!token });
+  const usersQ = useQuery({ queryKey: ['admin', 'users'], queryFn: () => apiFetch('/api/admin/users') as Promise<AdminUser[]>, enabled: !!token });
+  const cuponsQ = useQuery({ queryKey: ['admin', 'cupons'], queryFn: () => apiFetch('/api/admin/cupons') as Promise<Cupom[]>, enabled: !!token });
 
-  useEffect(() => {
-    if (token) fetchData();
-  }, [token]);
+  const stats = statsQ.data;
+  const users = useMemo(() => (Array.isArray(usersQ.data) ? usersQ.data : []), [usersQ.data]);
+  const cupons = Array.isArray(cuponsQ.data) ? cuponsQ.data : [];
+  const feeValue = fee ?? toMoneyInput(stats?.monthlyFee);
 
-  const handleUpdateFee = async () => {
-    setUpdatingFee(true);
-    try {
-      const res = await fetch(API_BASE_URL + '/api/admin/config', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify({ key: 'monthly_fee', value: newFee })
-      });
-      if (res.ok) fetchData();
-    } catch (err) { console.error(err); }
-    finally { setUpdatingFee(false); }
-  };
+  const filteredUsers = useMemo(() => {
+    const t = userQuery.trim().toLowerCase();
+    if (!t) return users;
+    return users.filter((u) => u.email.toLowerCase().includes(t) || (u.display_name || '').toLowerCase().includes(t));
+  }, [users, userQuery]);
 
-  const handleCreateCupom = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCupom.codigo || !newCupom.desconto) return;
-    setCreatingCupom(true);
-    try {
-      const res = await fetch(API_BASE_URL + '/api/admin/cupons', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify({ 
-          codigo: newCupom.codigo, 
-          desconto_percentual: newCupom.desconto, 
-          max_usos: newCupom.max_usos || null 
-        })
-      });
-      if (res.ok) {
-        setNewCupom({ codigo: '', desconto: '', max_usos: '' });
-        fetchData();
-      } else {
-        const error = await res.json();
-        alert(error.error || 'Erro ao criar cupom');
-      }
-    } catch (err) { console.error(err); }
-    finally { setCreatingCupom(false); }
-  };
+  const saveFee = useMutation({
+    mutationFn: (value: number) => apiFetch('/api/admin/config', { method: 'POST', body: JSON.stringify({ key: 'monthly_fee', value: value.toFixed(2) }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      setFee(null);
+      toast.success('Mensalidade atualizada');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Não foi possível salvar'),
+  });
 
-  const handleDeleteCupom = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover este cupom?')) return;
-    try {
-      const res = await fetch(API_BASE_URL + '/api/admin/cupons/' + id, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) fetchData();
-    } catch (err) { console.error(err); }
-  };
+  const createCupom = useMutation({
+    mutationFn: () => apiFetch('/api/admin/cupons', {
+      method: 'POST',
+      body: JSON.stringify({ codigo: novo.codigo, desconto_percentual: novo.desconto, max_usos: novo.max || null }),
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'cupons'] });
+      setNovo({ codigo: '', desconto: '', max: '' });
+      toast.success('Cupom criado');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Não foi possível criar o cupom'),
+  });
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-[#a3ff12]" size={40} />
-      </div>
-    );
-  }
+  const deleteCupom = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/admin/cupons/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'cupons'] });
+      toast.success('Cupom removido');
+    },
+  });
+
+  const feeNumber = parseMoney(feeValue);
+  const feeChanged = fee !== null && feeNumber > 0 && Math.abs(feeNumber - Number(stats?.monthlyFee)) > 0.004;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-1000 pb-20 px-4 md:px-6">
-      
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mt-10">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#a3ff12]/10 flex items-center justify-center border border-[#a3ff12]/20 shadow-[0_0_20px_rgba(163,255,18,0.2)]">
-            <ShieldCheck size={24} className="text-[#a3ff12]" />
-          </div>
-          <div>
-            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter">Painel Admin</h1>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Gestão da Plataforma Lyonk</p>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-5 lg:space-y-6">
+      <PageHeader title="Administração" description="Usuários, assinaturas e cupons da plataforma." />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="p-8 rounded-[2.5rem] bg-[#15151A] border border-white/5 relative overflow-hidden group hover:border-[#a3ff12]/20 transition-all">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-[#a3ff12]/5 blur-3xl" />
-          <p className="text-zinc-500 font-black text-[10px] uppercase tracking-widest mb-4">Total Usuários</p>
-          <div className="flex items-end justify-between">
-            <h2 className="text-4xl font-black text-white leading-none">{stats?.totalUsers}</h2>
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-zinc-500"><Users size={20}/></div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        {[
+          { label: 'Usuários', value: stats?.totalUsers ?? '—', icon: Users, tone: 'neutral' as const },
+          { label: 'Assinantes Pro', value: stats?.proUsers ?? '—', icon: Crown, tone: 'brand' as const },
+          { label: 'Volume movimentado', value: stats ? formatBRL(stats.globalVolume, { cents: false }) : '—', icon: TrendingUp, tone: 'info' as const },
+        ].map((s) => (
+          <Card key={s.label} className="p-4 sm:p-5">
+            <IconTile icon={s.icon} tone={s.tone} size="sm" />
+            <p className="mt-3 text-[13px] text-muted">{s.label}</p>
+            {statsQ.isLoading ? <Skeleton className="mt-1 h-7 w-20" /> : <p className="mt-0.5 truncate text-xl font-semibold tabular-nums text-fg">{s.value}</p>}
+          </Card>
+        ))}
+        <Card className="col-span-2 p-4 sm:p-5 lg:col-span-1">
+          <div className="flex items-end gap-2">
+            <MoneyInput label="Mensalidade" value={feeValue} onChange={setFee} />
+            <Button size="lg" disabled={!feeChanged} isLoading={saveFee.isPending} onClick={() => saveFee.mutate(feeNumber)}>Salvar</Button>
           </div>
-        </div>
-
-        <div className="p-8 rounded-[2.5rem] bg-[#15151A] border border-white/5 relative overflow-hidden group hover:border-[#FFD700]/20 transition-all">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-[#FFD700]/5 blur-3xl" />
-          <p className="text-zinc-500 font-black text-[10px] uppercase tracking-widest mb-4">Assinantes PRO</p>
-          <div className="flex items-end justify-between">
-            <h2 className="text-4xl font-black text-[#FFD700] leading-none">{stats?.proUsers}</h2>
-            <div className="w-10 h-10 rounded-xl bg-[#FFD700]/10 flex items-center justify-center text-[#FFD700]"><Star size={20}/></div>
-          </div>
-        </div>
-
-        <div className="p-8 rounded-[2.5rem] bg-[#15151A] border border-white/5 relative overflow-hidden group">
-          <p className="text-zinc-500 font-black text-[10px] uppercase tracking-widest mb-4">Volume Mensal (Mov.)</p>
-          <div className="flex items-end justify-between">
-            <h2 className="text-4xl font-black text-white leading-none truncate">R$ {stats?.globalVolume.toLocaleString('pt-BR')}</h2>
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-zinc-500"><TrendingUp size={20}/></div>
-          </div>
-        </div>
-
-        <div className="p-8 rounded-[2.5rem] bg-[#15151A] border border-[#a3ff12]/20 relative overflow-hidden group shadow-2xl">
-          <div className="absolute inset-0 bg-[#a3ff12]/5 pointer-events-none" />
-          <p className="text-[#a3ff12] font-black text-[10px] uppercase tracking-widest mb-4">Mensalidade Atual</p>
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1">
-               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3ff12] font-black text-xs">R$</span>
-               <input 
-                type="number" 
-                step="0.01" 
-                value={newFee} 
-                onChange={(e) => setNewFee(e.target.value)}
-                className="w-full bg-black/40 border border-[#a3ff12]/20 rounded-xl py-3 pl-8 pr-3 text-white font-black text-xl outline-none focus:border-[#a3ff12] transition-all"
-               />
-            </div>
-            <button 
-              onClick={handleUpdateFee}
-              disabled={updatingFee || newFee === stats?.monthlyFee}
-              className="p-3.5 bg-[#a3ff12] text-black rounded-xl hover:scale-110 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
-            >
-              {updatingFee ? <Loader2 className="animate-spin" size={20}/> : <Save size={20}/>}
-            </button>
-          </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Users List */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between px-4">
-          <h3 className="text-2xl font-black text-white flex items-center gap-3">
-            <div className="w-2 h-6 bg-[#a3ff12] rounded-full shadow-[0_0_10px_rgba(163,255,18,0.5)]" /> Lista de Usuários
-          </h3>
-          <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{users.length} Registrados</span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
-          {users.map((u) => (
-            <div key={u.id} className="group p-6 rounded-[2rem] bg-[#15151A] border border-white/5 hover:border-white/10 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-inner ${u.role === 'admin' ? 'bg-[#a3ff12]/10 text-[#a3ff12] border border-[#a3ff12]/20' : 'bg-white/5 text-zinc-500'}`}>
-                  {u.role === 'admin' ? <ShieldCheck size={28}/> : <Users size={28}/>}
+      <div className="grid gap-4 lg:grid-cols-5 lg:items-start lg:gap-6">
+        <Card className="overflow-hidden lg:col-span-3">
+          <CardHeader title="Usuários" description={`${users.length} cadastrados`} />
+          <div className="px-4 pt-3 sm:px-5">
+            <Input value={userQuery} onChange={(e) => setUserQuery(e.target.value)} placeholder="Buscar por nome ou e-mail" leftIcon={<Search size={17} />} className="h-11" />
+          </div>
+          <div className="mt-3 max-h-[560px] divide-y divide-line overflow-y-auto border-t border-line">
+            {usersQ.isLoading ? (
+              <div className="space-y-3 p-4">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+            ) : filteredUsers.length === 0 ? (
+              <EmptyState icon={Users} title="Nenhum usuário encontrado" />
+            ) : filteredUsers.map((u) => (
+              <div key={u.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                <IconTile icon={u.role === 'admin' ? ShieldCheck : Users} tone={u.role === 'admin' ? 'brand' : 'neutral'} />
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 truncate text-[15px] font-medium text-fg">
+                    <span className="truncate">{u.display_name || 'Sem nome'}</span>
+                    {u.is_pro && <Badge tone="brand">Pro</Badge>}
+                    {u.role === 'admin' && <Badge tone="info">Admin</Badge>}
+                  </p>
+                  <p className="truncate text-[13px] text-muted">{u.email}</p>
                 </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h4 className="text-xl font-black text-white tracking-tight">{u.display_name || 'Sem nome'}</h4>
-                    {u.is_pro && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 bg-[#FFD700]/10 text-[#FFD700] text-[8px] font-black uppercase rounded-md border border-[#FFD700]/20 tracking-tighter">
-                        <Star size={8} fill="currentColor"/> PRO
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs font-bold text-zinc-500">{u.email}</p>
-                </div>
+                <p className="hidden shrink-0 text-xs text-subtle sm:block">desde {new Date(u.created_at).toLocaleDateString('pt-BR')}</p>
               </div>
+            ))}
+          </div>
+        </Card>
 
-              <div className="flex flex-wrap items-center gap-8 md:text-right">
-                <div>
-                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Cadastro em</p>
-                  <p className="text-sm font-bold text-zinc-400">{new Date(u.created_at).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Nível</p>
-                  <p className={`text-sm font-bold ${u.role === 'admin' ? 'text-[#a3ff12]' : 'text-zinc-400'} uppercase`}>{u.role}</p>
-                </div>
-                <button className="p-3 rounded-xl bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 transition-all"><ArrowRight size={20}/></button>
-              </div>
+        <Card className="overflow-hidden lg:col-span-2">
+          <CardHeader title="Cupons" description={`${cupons.length} cadastrados`} />
+          <form
+            className="grid grid-cols-2 gap-3 p-4 sm:p-5"
+            onSubmit={(e) => { e.preventDefault(); if (novo.codigo && novo.desconto) createCupom.mutate(); }}
+          >
+            <div className="col-span-2">
+              <Input label="Código" value={novo.codigo} onChange={(e) => setNovo({ ...novo, codigo: e.target.value.replace(/\s/g, '').toUpperCase() })} placeholder="EX.: LYONK20" required />
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Cupons List */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between px-4">
-          <h3 className="text-2xl font-black text-white flex items-center gap-3">
-            <div className="w-2 h-6 bg-[#FF2D55] rounded-full shadow-[0_0_10px_rgba(255,45,85,0.5)]" /> Cupons de Desconto
-          </h3>
-          <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{cupons.length} Ativos</span>
-        </div>
-
-        {/* Create Cupom Form */}
-        <form onSubmit={handleCreateCupom} className="p-6 rounded-[2rem] bg-[#15151A] border border-white/5 flex flex-col md:flex-row gap-4 items-end">
-          <div className="flex-1 w-full">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Código do Cupom</label>
-            <input required value={newCupom.codigo} onChange={e => setNewCupom({...newCupom, codigo: e.target.value.replace(/\\s/g, '').toUpperCase()})} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white uppercase focus:border-[#FF2D55] outline-none transition-all" placeholder="Ex: LYONK100"/>
-          </div>
-          <div className="flex-1 w-full">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">% de Desconto</label>
-            <input required type="number" min="1" max="100" value={newCupom.desconto} onChange={e => setNewCupom({...newCupom, desconto: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#FF2D55] outline-none transition-all" placeholder="Ex: 100"/>
-          </div>
-          <div className="flex-1 w-full">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Limite de Usos (Opcional)</label>
-            <input type="number" min="1" value={newCupom.max_usos} onChange={e => setNewCupom({...newCupom, max_usos: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#FF2D55] outline-none transition-all" placeholder="Ilimitado"/>
-          </div>
-          <button type="submit" disabled={creatingCupom} className="w-full md:w-auto h-[50px] px-8 bg-[#FF2D55] text-white font-black rounded-xl hover:scale-105 transition-all flex items-center justify-center gap-2">
-            {creatingCupom ? <Loader2 className="animate-spin" size={20}/> : <><Plus size={20}/> CRIAR</>}
-          </button>
-        </form>
-
-        {/* List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {cupons.map((c) => (
-            <div key={c.id} className="p-6 rounded-[2rem] bg-[#15151A] border border-white/5 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#FF2D55]/10 text-[#FF2D55] flex items-center justify-center">
-                  <Ticket size={24}/>
+            <Input label="Desconto (%)" type="number" inputMode="numeric" min={1} max={100} value={novo.desconto} onChange={(e) => setNovo({ ...novo, desconto: e.target.value })} required />
+            <Input label="Limite de usos" type="number" inputMode="numeric" min={1} value={novo.max} onChange={(e) => setNovo({ ...novo, max: e.target.value })} placeholder="Ilimitado" />
+            <Button type="submit" className="col-span-2" isLoading={createCupom.isPending}><Ticket size={17} /> Criar cupom</Button>
+          </form>
+          <div className="divide-y divide-line border-t border-line">
+            {cupons.length === 0 ? (
+              <EmptyState icon={Ticket} title="Nenhum cupom" className="py-8" />
+            ) : cupons.map((c) => (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                <IconTile icon={Ticket} tone="brand" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-[15px] font-semibold text-fg">{c.codigo}</p>
+                  <p className="text-[13px] text-muted">{Number(c.desconto_percentual)}% de desconto · {c.usos_atuais ?? 0}/{c.max_usos ?? '∞'} usos</p>
                 </div>
-                <div>
-                  <h4 className="text-xl font-black text-white uppercase tracking-tight">{c.codigo}</h4>
-                  <p className="text-sm font-bold text-[#FF2D55]">{c.desconto_percentual}% OFF</p>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Remover cupom ${c.codigo}`}
+                  onClick={async () => {
+                    if (await confirm({ title: 'Remover cupom?', description: c.codigo, confirmText: 'Remover', danger: true })) deleteCupom.mutate(c.id);
+                  }}
+                >
+                  <Trash2 size={16} />
+                </Button>
               </div>
-              <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Usos</p>
-                  <p className="text-sm font-bold text-white">{c.usos_atuais} / {c.max_usos || '∞'}</p>
-                </div>
-                <button onClick={() => handleDeleteCupom(c.id)} className="w-10 h-10 rounded-xl bg-white/5 text-zinc-500 hover:bg-red-500/20 hover:text-red-500 flex items-center justify-center transition-all">
-                  <Trash2 size={18}/>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Card>
       </div>
-
     </div>
   );
 }

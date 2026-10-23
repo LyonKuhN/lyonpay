@@ -9,17 +9,28 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType>({ theme: 'dark', toggleTheme: () => {} });
 
+function initialTheme(): Theme {
+  try {
+    const saved = localStorage.getItem('lyonk-theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    // armazenamento indisponível (modo privado): segue o sistema
+  }
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    return (localStorage.getItem('lyonk-theme') as Theme) || 'dark';
-  });
+  const [theme, setTheme] = useState<Theme>(initialTheme);
 
   useEffect(() => {
-    localStorage.setItem('lyonk-theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('lyonk-theme', theme);
+    } catch {
+      // sem persistência, o tema vale só nesta sessão
+    }
   }, [theme]);
 
-  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

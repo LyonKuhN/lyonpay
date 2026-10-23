@@ -69,8 +69,8 @@ export function NeuralVortexBackground() {
         
         // Colors updated for the dark green theme
         color = vec3(0.06, 0.06, 0.08); // Dark gray/black base
-        color = mix(color, vec3(0.64, 1.0, 0.07), 0.32 + 0.16 * sin(2.0 * u_scroll_progress + 1.2)); // Neon green
-        color += vec3(0.84, 1.0, 0.40) * sin(2.0 * u_scroll_progress + 1.5); // Lighter green highlights
+        color = mix(color, vec3(0.83, 0.69, 0.37), 0.30 + 0.14 * sin(2.0 * u_scroll_progress + 1.2)); // Dourado da marca
+        color += vec3(0.90, 0.80, 0.55) * sin(2.0 * u_scroll_progress + 1.5); // Brilho dourado
         
         color = color * noise;
         gl_FragColor = vec4(color, noise * 0.5); // Made slightly more transparent

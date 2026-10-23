@@ -36,7 +36,7 @@ export function GooeyText({
           animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
           exit={{ opacity: 0, filter: "blur(12px)", y: -15 }}
           transition={{ duration: morphTime / 2, ease: "easeInOut" }}
-          className={`absolute text-center text-4xl md:text-6xl text-[#D7FF67] font-bold ${textClassName || ''}`}
+          className={`absolute text-center text-4xl md:text-6xl text-brand font-bold ${textClassName || ''}`}
         >
           {texts[index]}
         </motion.span>

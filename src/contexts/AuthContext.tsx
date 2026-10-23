@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 interface User {
   id: string;
@@ -17,87 +18,103 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   updateUser: (newUser: User) => void;
+  /** Busca no servidor o plano e a validade atuais (sem novo login). */
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function readStored(): { token: string | null; user: User | null } {
+  try {
+    const token = localStorage.getItem('lyonk_token');
+    const raw = localStorage.getItem('lyonk_user');
+    return token && raw ? { token, user: JSON.parse(raw) } : { token: null, user: null };
+  } catch {
+    return { token: null, user: null };
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [{ token, user }, setSession] = useState(readStored);
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  useEffect(() => {
-    const savedToken = localStorage.getItem('lyonk_token');
-    const savedUser = localStorage.getItem('lyonk_user');
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
-  }, []);
+  const clear = () => {
+    setSession({ token: null, user: null });
+    localStorage.removeItem('lyonk_token');
+    localStorage.removeItem('lyonk_user');
+  };
 
-  // Listen for session expiry events dispatched by apiFetch
+  // apiFetch dispara este evento quando a API responde 401/403
   useEffect(() => {
     const handleExpired = () => {
+      if (!localStorage.getItem('lyonk_token')) return;
       setSessionExpired(true);
-      setToken(null);
-      setUser(null);
-      localStorage.removeItem('lyonk_token');
-      localStorage.removeItem('lyonk_user');
+      clear();
     };
     window.addEventListener('session-expired', handleExpired);
     return () => window.removeEventListener('session-expired', handleExpired);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
+    setSession({ token: newToken, user: newUser });
     setSessionExpired(false);
     localStorage.setItem('lyonk_token', newToken);
     localStorage.setItem('lyonk_user', JSON.stringify(newUser));
   };
 
-  const updateUser = (newUser: User) => {
-    setUser(newUser);
+  const updateUser = useCallback((newUser: User) => {
+    setSession((s) => ({ ...s, user: newUser }));
     localStorage.setItem('lyonk_user', JSON.stringify(newUser));
-  };
+  }, []);
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('lyonk_token');
-    localStorage.removeItem('lyonk_user');
-  };
+  const refreshUser = useCallback(async () => {
+    const current = localStorage.getItem('lyonk_token');
+    if (!current) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${current}` } });
+      if (res.status === 401 || res.status === 403) {
+        window.dispatchEvent(new CustomEvent('session-expired'));
+        return;
+      }
+      if (!res.ok) return;
+      const fresh = await res.json();
+      if (fresh?.id) updateUser(fresh);
+    } catch {
+      // sem rede: segue com os dados guardados
+    }
+  }, [updateUser]);
+
+  // Ao abrir o app, confirma plano e validade no servidor (o estado só muda depois da resposta)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshUser();
+  }, [refreshUser]);
+
+  const logout = () => clear();
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, updateUser, isAuthenticated: !!token, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, refreshUser, isAuthenticated: !!token, isLoading: false }}>
       {children}
 
-      {/* Session Expired Overlay */}
       {sessionExpired && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="bg-[#15151A] border border-white/10 rounded-[2rem] p-10 max-w-sm w-full text-center shadow-2xl space-y-6 animate-in zoom-in-95 duration-500">
-            <div className="w-16 h-16 mx-auto rounded-[1.2rem] bg-[#FF4D4D]/10 flex items-center justify-center">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
+        <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+          <div className="w-full max-w-sm rounded-3xl border border-line bg-surface p-6 text-center shadow-pop">
+            <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-warn/14 text-warn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
               </svg>
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-white tracking-tighter">Sessão Expirada</h2>
-              <p className="text-zinc-500 text-sm font-bold mt-2 leading-relaxed">
-                Por segurança, a sua sessão foi encerrada após um período de inatividade.<br/>Faça login novamente para continuar.
-              </p>
-            </div>
+            </span>
+            <h2 className="text-lg font-semibold text-fg">Sua sessão expirou</h2>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-muted">Por segurança, entre de novo para continuar.</p>
             <button
+              type="button"
               onClick={() => { setSessionExpired(false); window.location.href = '/'; }}
-              className="w-full py-4 bg-[#a3ff12] text-black font-black rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg text-sm uppercase tracking-widest"
+              className="mt-6 h-12 w-full rounded-xl bg-brand text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-soft"
             >
-              Fazer Login Novamente
+              Entrar novamente
             </button>
           </div>
         </div>

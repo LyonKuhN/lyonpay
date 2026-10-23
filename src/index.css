@@ -1,25 +1,106 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
+/* =====================================================
+   Tokens de design
+   O tema escuro é o padrão; html.light troca as variáveis
+   e todas as classes (bg-surface, text-muted...) acompanham.
+   ===================================================== */
 @theme {
-  --color-background: #0B0B0E;
-  --color-surface: #15151A;
-  --color-surfaceHighlight: #1F1F26;
-  --color-primary: #FFD700;
-  --color-accentGreen: #00FFA3;
-  --color-accentRed: #FF4D4D;
-  --color-textPrimary: #FFFFFF;
-  --color-textSecondary: #A1A1AA;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --color-bg: #0b0c0f;
+  --color-surface: #131519;
+  --color-elevated: #1a1d23;
+  --color-line: #23262d;
+  --color-line-strong: #30343c;
+  --color-fg: #f2f3f5;
+  --color-muted: #9ba1ad;
+  --color-subtle: #6c7280;
+
+  /* Dourado do monograma LK */
+  --color-brand: #d4af5f;
+  --color-brand-soft: #e6cb8c;
+  --color-on-brand: #17130a;
+
+  --color-pos: #3ccb7f;
+  --color-neg: #f26d6d;
+  --color-warn: #f0b54a;
+  --color-info: #6ea8f7;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.25), 0 12px 32px -16px rgb(0 0 0 / 0.5);
+  --shadow-pop: 0 24px 64px -16px rgb(0 0 0 / 0.6);
 }
 
-body, * {
-  -webkit-font-smoothing: antialiased;
-  font-family: 'Outfit', sans-serif !important;
+html.light {
+  --color-bg: #f6f5f1;
+  --color-surface: #ffffff;
+  --color-elevated: #f1efe9;
+  --color-line: #e7e3da;
+  --color-line-strong: #d6d1c5;
+  --color-fg: #16150f;
+  --color-muted: #615d54;
+  --color-subtle: #8c877b;
+
+  --color-brand: #8e6a1f;
+  --color-brand-soft: #b8933f;
+  --color-on-brand: #ffffff;
+
+  --color-pos: #177a43;
+  --color-neg: #c42f2f;
+  --color-warn: #a85a07;
+  --color-info: #2457c5;
+
+  --shadow-soft: 0 1px 2px rgb(22 21 15 / 0.04), 0 10px 28px -14px rgb(22 21 15 / 0.14);
+  --shadow-pop: 0 24px 64px -20px rgb(22 21 15 / 0.28);
 }
 
-body {
-  background-color: var(--color-background);
-  color: var(--color-textPrimary);
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss03";
+    overscroll-behavior-y: none;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-brand) 35%, transparent);
+  }
 }
 
 @layer utilities {
@@ -30,153 +111,28 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
 }
 
-/* Glassmorphism utility */
+/* Usado pelo banner de cookies e pela landing */
 .glass {
-  background: rgba(21, 21, 26, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in oklab, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-line);
 }
 
-/* =====================================================
-   LIGHT MODE OVERRIDES
-   Substitui os cards/backgrounds escuros por tons claros
-   ===================================================== */
-html.light {
-  --color-background: #F4F5F7;
-  --color-surface: #FFFFFF;
-  --color-textPrimary: #111827;
-  --color-textSecondary: #6B7280;
-}
-
-html.light body {
-  background-color: #F4F5F7;
-  color: #111827;
-}
-
-html.light .glass {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-/* Cards escuros → brancos */
-html.light .bg-\[\#09090B\],
-html.light .bg-\[\#0D0D12\],
-html.light .bg-\[\#15151A\],
-html.light .bg-\[\#1C1C21\],
-html.light .bg-\[\#1e1e24\],
-html.light .bg-\[\#1a1a20\] {
-  background-color: #FFFFFF !important;
-}
-
-html.light .bg-\[\#15151A\]\/80,
-html.light .bg-\[\#15151A\]\/60,
-html.light .bg-\[\#15151A\]\/20,
-html.light .bg-\[\#09090B\]\/80,
-html.light .bg-\[\#15151A\]\/50,
-html.light .bg-\[\#15151A\]\/30 {
-  background-color: rgba(255,255,255,0.9) !important;
-}
-
-/* Backgrounds pretos opacos (ex: bg-black/40) */
-html.light .bg-black\/40,
-html.light .bg-black\/20 {
-  background-color: #F9FAFB !important;
-}
-
-/* Texto branco → escuro */
-html.light .text-white {
-  color: #111827 !important;
-}
-
-/* Textos cinza → mais legíveis */
-html.light .text-zinc-500,
-html.light .text-zinc-400,
-html.light .text-zinc-600,
-html.light .text-zinc-700 {
-  color: #6B7280 !important;
-}
-
-html.light .text-zinc-300 {
-  color: #374151 !important;
-}
-
-/* Bordas sutis */
-html.light .border-white\/5,
-html.light .border-white\/10,
-html.light .border-white\/15,
-html.light .border-white\/20 {
-  border-color: rgba(0,0,0,0.07) !important;
-}
-
-html.light .border-white\/\[0\.05\] {
-  border-color: rgba(0,0,0,0.07) !important;
-}
-
-/* Backgrounds brancos semitransparentes */
-html.light .bg-white\/5 {
-  background-color: rgba(0,0,0,0.04) !important;
-}
-
-html.light .bg-white\/\[0\.02\],
-html.light .bg-white\/\[0\.01\] {
-  background-color: rgba(0,0,0,0.02) !important;
-}
-
-/* Gradientes dos cards escuros */
-html.light .from-\[\#1C1C21\],
-html.light .to-\[\#0D0D12\] {
-  --tw-gradient-from: #FFFFFF !important;
-  --tw-gradient-to: #F0F2F5 !important;
-}
-
-html.light .from-\[\#09090B\] {
-  --tw-gradient-from: #F4F5F7 !important;
-}
-
-/* FloatingNav light */
-html.light nav.glass {
-  background: rgba(255,255,255,0.92) !important;
-  border-color: rgba(0,0,0,0.08) !important;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08) !important;
-}
-
-html.light nav .text-zinc-400 {
-  color: #4B5563 !important;
-}
-
-/* Input fields */
-html.light input[type="text"],
-html.light input[type="email"],
-html.light input[type="password"] {
-  background-color: #F4F5F7 !important;
-  border-color: rgba(0,0,0,0.1) !important;
-  color: #111827 !important;
-}
-
-html.light input::placeholder {
-  color: #9CA3AF !important;
-}
-
-/* Scrollbar */
-html.light ::-webkit-scrollbar-track {
-  background: #F4F5F7;
-}
-
-html.light ::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
-}
-
-/* Recharts Tooltips in Light Mode */
-html.light .recharts-default-tooltip {
-  background-color: #FFFFFF !important;
-  border-color: rgba(0,0,0,0.1) !important;
-  color: #111827 !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-html.light .recharts-tooltip-item {
-  color: #111827 !important;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

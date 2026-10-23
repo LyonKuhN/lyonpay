@@ -14,7 +14,7 @@ const resend = new Resend(process.env.RESEND_API_KEY || '');
 const EMAIL_FROM = process.env.EMAIL_FROM || 'LyonK <adm@lyonk.com.br>';
 
 export const initCronJobs = () => {
-  // Roda todos os dias às 08:00 da manhã
+  // Roda todos os dias às 08:00 no horário de Brasília (o container roda em UTC)
   cron.schedule('0 8 * * *', async () => {
     console.log('[CRON] Iniciando verificação de despesas do dia...');
     try {
@@ -101,5 +101,5 @@ export const initCronJobs = () => {
     } catch (err) {
       console.error('[CRON] Erro ao executar job de despesas do dia:', err);
     }
-  });
+  }, { timezone: 'America/Sao_Paulo' });
 };
