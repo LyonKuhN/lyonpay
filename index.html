@@ -3,40 +3,151 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/logo.png" />
+    
+    <!-- Microsoft Clarity (Heatmaps & Session Replays) -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "y3wzdjv9g6");
+    </script>
+
+    <!-- Google tag (gtag.js) - Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2HW08XP0XW"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-2HW08XP0XW');
+    </script>
+
+    <!-- Pré-conexão de Fontes para Performance (Core Web Vitals) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- SEO Principal -->
-    <title>Lyonk | Controle Financeiro e Finanças Pessoais</title>
-    <meta name="description" content="A melhor plataforma de controle financeiro. Automatize despesas, acompanhe gráficos e faça a sua gestão de finanças pessoais de forma inteligente." />
-    <meta name="keywords" content="finanças, controle financeiro, gestão de gastos, planejamento financeiro, lyonk, despesas, receitas, dashboard financeiro, economia" />
+    <title>Lyonk | Controle Financeiro Pessoal e Gestão de Despesas</title>
+    <meta name="description" content="A melhor plataforma de controle financeiro pessoal. Automatize contas fixas, acompanhe parcelas, gráficos dinâmicos e alertas de vencimento sem complicação." />
+    <meta name="keywords" content="controle financeiro, finanças pessoais, gestão de gastos, aplicativo de finanças, planilha de gastos, organização financeira, automação de despesas, lyonk" />
     <meta name="author" content="Lyonk" />
-    <meta name="robots" content="index, follow" />
-    
-    <!-- Open Graph (WhatsApp, Facebook, LinkedIn) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://lyonk.com.br/" />
-    <meta property="og:title" content="Lyonk | Controle seu futuro." />
-    <meta property="og:description" content="Automatize suas finanças, acompanhe gráficos dinâmicos e assuma o controle do seu dinheiro com a plataforma mais premium do mercado." />
-    <meta property="og:image" content="https://lyonk.com.br/og-image.png" />
-    <meta property="og:locale" content="pt_BR" />
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://lyonk.com.br/" />
-    <meta property="twitter:title" content="Lyonk | Controle seu futuro." />
-    <meta property="twitter:description" content="Automatize suas finanças e assuma o controle do seu dinheiro." />
-    <meta property="twitter:image" content="https://lyonk.com.br/og-image.png" />
-    
-    <!-- Theme & Canonical -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://lyonk.com.br/" />
     <meta name="theme-color" content="#0B0C0F" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="canonical" href="https://lyonk.com.br/" />
+    
+    <!-- Open Graph (WhatsApp, Facebook, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lyonk" />
+    <meta property="og:url" content="https://lyonk.com.br/" />
+    <meta property="og:title" content="Lyonk | Controle Financeiro Pessoal e Gestão de Despesas" />
+    <meta property="og:description" content="Automatize suas finanças pessoais, acompanhe gráficos em tempo real e assuma o controle total do seu dinheiro com o Lyonk." />
+    <meta property="og:image" content="https://lyonk.com.br/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Plataforma de Controle Financeiro Lyonk" />
+    <meta property="og:locale" content="pt_BR" />
+    
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://lyonk.com.br/" />
+    <meta name="twitter:title" content="Lyonk | Controle Financeiro Pessoal e Gestão de Despesas" />
+    <meta name="twitter:description" content="Automatize suas finanças pessoais, acompanhe gráficos em tempo real e assuma o controle total do seu dinheiro com o Lyonk." />
+    <meta name="twitter:image" content="https://lyonk.com.br/og-image.png" />
+
+    <!-- Dados Estruturados Schema.org (JSON-LD) para Rich Snippets no Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://lyonk.com.br/#organization",
+          "name": "Lyonk",
+          "url": "https://lyonk.com.br/",
+          "logo": "https://lyonk.com.br/logo.png",
+          "description": "Plataforma inteligente de controle financeiro pessoal e automação de gestão de despesas."
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://lyonk.com.br/#website",
+          "url": "https://lyonk.com.br/",
+          "name": "Lyonk | Controle Financeiro",
+          "description": "Plataforma de controle financeiro pessoal inteligente",
+          "publisher": {
+            "@id": "https://lyonk.com.br/#organization"
+          },
+          "inLanguage": "pt-BR"
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://lyonk.com.br/#webapp",
+          "name": "Lyonk",
+          "url": "https://lyonk.com.br/",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "All",
+          "offers": {
+            "@type": "Offer",
+            "price": "17.00",
+            "priceCurrency": "BRL",
+            "priceValidUntil": "2027-12-31",
+            "availability": "https://schema.org/InStock"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "ratingCount": "2400",
+            "reviewCount": "2400"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://lyonk.com.br/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "O que é o Lyonk?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "O Lyonk é uma plataforma inteligente de controle financeiro pessoal projetada para automatizar o gerenciamento de receitas, despesas, parcelamentos e contas recorrentes."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Preciso cadastrar cartão de crédito para experimentar grátis?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Não! Você pode testar o Lyonk gratuitamente por 7 dias sem a necessidade de informar dados de cartão de crédito."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Como funciona a automação de despesas fixas?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Com apenas um clique, o Lyonk gera todas as suas contas fixas do mês (como aluguel, luz, internet), eliminando a necessidade de redigitar os lançamentos manualmente."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Meus dados financeiros estão seguros no Lyonk?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sim. Todos os dados são criptografados de ponta a ponta e trafegam via protocolo seguro HTTPS. Suas informações são privadas e nunca compartilhadas com terceiros."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

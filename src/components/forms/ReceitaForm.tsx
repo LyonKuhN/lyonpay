@@ -46,7 +46,7 @@ export function ReceitaFormSheet({ open, onClose, receita, onDelete }: Props) {
       footer={
         <div className="flex gap-2">
           {receita && onDelete && (
-            <Button variant="danger-soft" size="lg" className="w-12 px-0" onClick={onDelete} aria-label="Excluir receita">
+            <Button variant="danger-soft" size="icon-lg" onClick={onDelete} aria-label="Excluir receita">
               <Trash2 size={18} />
             </Button>
           )}

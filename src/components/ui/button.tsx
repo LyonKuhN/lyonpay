@@ -3,7 +3,7 @@ import { LoaderCircle } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-soft';
-type Size = 'sm' | 'md' | 'lg' | 'icon' | 'icon-sm';
+type Size = 'sm' | 'md' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -26,6 +26,7 @@ const SIZES: Record<Size, string> = {
   lg: 'h-12 px-5 text-[15px] gap-2',
   icon: 'h-10 w-10',
   'icon-sm': 'h-9 w-9',
+  'icon-lg': 'h-12 w-12',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

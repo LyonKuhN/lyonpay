@@ -1,3 +1,14 @@
 User-agent: *
-Allow: /
-Sitemap: https://contas.lyonpay.com/sitemap.xml
+Allow: /$
+Allow: /politica-de-privacidade
+Disallow: /dashboard
+Disallow: /receitas
+Disallow: /despesas
+Disallow: /calendario
+Disallow: /pagamentos
+Disallow: /config
+Disallow: /admin
+Disallow: /verify
+Disallow: /reset-password
+
+Sitemap: https://lyonk.com.br/sitemap.xml

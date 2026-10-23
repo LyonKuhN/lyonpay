@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
-  ArrowUpRight, Bookmark, ChevronDown, CircleCheck, Layers, Plus, Repeat, Search, SlidersHorizontal, X,
+  ArrowUpRight, Bookmark, ChevronDown, CircleCheck, Download, Layers, Plus, Repeat, Search, SlidersHorizontal, X,
 } from 'lucide-react';
 import { useCategorias, useDespesas, useModelos } from '../hooks/queries';
 import { useDespesaActions } from '../hooks/useDespesaActions';
@@ -17,7 +18,7 @@ import { DespesaFormSheet, type DespesaFormTarget } from '../components/forms/De
 import { categoryIcon, CHART_COLORS } from '../lib/categories';
 import { cn } from '../lib/cn';
 import {
-  dateKey, dueStatus, formatBRL, formatDate, formatDayMonth, MONTHS, parseDateOnly, parseMoney, percent,
+  dateKey, dueStatus, formatBRL, formatDate, formatDayMonth, MONTHS, parseDateOnly, parseMoney, percent, todayISO,
 } from '../lib/format';
 import { normalizeTipo, TIPO_LABEL, type Despesa, type TipoDespesa } from '../lib/types';
 
@@ -141,6 +142,33 @@ export default function Despesas() {
   const currentGroup = groups.find((g) => g.id === groupId) ?? null;
   const loading = despesasQ.isLoading;
 
+  // Planilha das contas em aberto (pendentes e atrasadas), em ordem de vencimento
+  const exportCSV = () => {
+    const abertas = all
+      .filter((d) => !d.pago && !d.is_modelo)
+      .sort((a, b) => dateKey(a.data_vencimento).localeCompare(dateKey(b.data_vencimento)));
+    if (abertas.length === 0) {
+      toast('Nenhuma despesa em aberto para exportar.');
+      return;
+    }
+    const cell = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const rows = [
+      ['Conta', 'Categoria', 'Data de vencimento', 'Valor (R$)'].join(';'),
+      ...abertas.map((d) => [cell(d.descricao), cell(d.categoria || 'Outros'), formatDate(d.data_vencimento), Number(d.valor).toFixed(2).replace('.', ',')].join(';')),
+    ];
+    // BOM para o Excel reconhecer UTF-8; ";" é o separador do Excel em português
+    const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Contas_em_aberto_${formatDate(todayISO()).replace(/\//g, '-')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`${abertas.length} contas exportadas`);
+  };
+
   const monthTitle = (key: string) => {
     if (key === 'sem-data') return 'Sem data';
     const [y, m] = key.split('-').map(Number);
@@ -186,6 +214,9 @@ export default function Despesas() {
             <Button variant="secondary" size="icon" className="relative h-11 w-11" onClick={() => setFiltersOpen(true)} aria-label="Filtros">
               <SlidersHorizontal size={19} />
               {activeFilters > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-semibold text-on-brand">{activeFilters}</span>}
+            </Button>
+            <Button variant="secondary" size="icon" className="h-11 w-11" onClick={exportCSV} aria-label="Exportar contas em aberto (CSV)" title="Exportar contas em aberto (CSV)">
+              <Download size={19} />
             </Button>
           </div>
 

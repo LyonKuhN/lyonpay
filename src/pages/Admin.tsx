@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Crown, Search, ShieldCheck, Ticket, Trash2, TrendingUp, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bell, ChevronRight, Crown, Search, ShieldCheck, ShoppingCart, Ticket, Trash2, TrendingUp, Users, type LucideIcon } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../components/ui/confirm';
@@ -74,6 +75,22 @@ export default function Admin() {
   return (
     <div className="space-y-5 lg:space-y-6">
       <PageHeader title="Administração" description="Usuários, assinaturas e cupons da plataforma." />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
+        {([
+          { to: '/admin/compras', icon: ShoppingCart, tone: 'info', title: 'Lista de compras', desc: 'Compras e prioridades' },
+          { to: '/admin/lembretes', icon: Bell, tone: 'warn', title: 'Lembretes', desc: 'Avisos e alertas agendados' },
+        ] as Array<{ to: string; icon: LucideIcon; tone: 'info' | 'warn'; title: string; desc: string }>).map((t) => (
+          <Link key={t.to} to={t.to} className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-soft transition-colors hover:border-line-strong sm:p-5">
+            <IconTile icon={t.icon} tone={t.tone} size="lg" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold text-fg">{t.title}</span>
+              <span className="block text-[13px] text-muted">{t.desc}</span>
+            </span>
+            <ChevronRight size={18} className="text-subtle" />
+          </Link>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {[

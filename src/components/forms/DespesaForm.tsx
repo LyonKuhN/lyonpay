@@ -113,7 +113,7 @@ export function DespesaFormSheet({ open, onClose, target, onSaved, onDelete }: S
       footer={
         <div className="flex gap-2">
           {editing && onDelete && (
-            <Button variant="danger-soft" size="lg" className="w-12 px-0" onClick={onDelete} aria-label="Excluir">
+            <Button variant="danger-soft" size="icon-lg" onClick={onDelete} aria-label="Excluir">
               <Trash2 size={18} />
             </Button>
           )}

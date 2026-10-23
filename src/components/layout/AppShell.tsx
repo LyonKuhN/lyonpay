@@ -60,6 +60,8 @@ const TITLES: Record<string, string> = {
   '/calendario': 'Agenda',
   '/config': 'Configurações',
   '/admin': 'Administração',
+  '/admin/compras': 'Lista de compras',
+  '/admin/lembretes': 'Lembretes do admin',
 };
 
 function initials(name?: string, email?: string) {

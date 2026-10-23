@@ -7,8 +7,8 @@ import { ConfirmProvider } from './components/ui/confirm';
 import AppShell from './components/layout/AppShell';
 import CookieConsent from './components/CookieConsent';
 
-// Cada tela vira um arquivo próprio: quem abre o app não baixa a landing (e vice-versa).
-const Landing = lazy(() => import('./pages/Landing'));
+// A landing vem no pacote principal para aparecer rápido (LCP); as demais telas carregam sob demanda.
+import Landing from './pages/Landing';
 const Verify = lazy(() => import('./pages/Verify'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
@@ -19,6 +19,8 @@ const Receitas = lazy(() => import('./pages/Receitas'));
 const Calendario = lazy(() => import('./pages/Calendario'));
 const Config = lazy(() => import('./pages/Config'));
 const Admin = lazy(() => import('./pages/Admin'));
+const AdminCompras = lazy(() => import('./pages/AdminCompras'));
+const AdminLembretes = lazy(() => import('./pages/AdminLembretes'));
 
 function FullPageLoader() {
   return (
@@ -28,11 +30,12 @@ function FullPageLoader() {
   );
 }
 
-/** Exige login. */
+/** Exige login; guarda a tela pedida para voltar a ela depois de entrar. */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
   if (isLoading) return <FullPageLoader />;
-  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isAuthenticated) return <Navigate to="/" state={{ from: location.pathname }} replace />;
   return <>{children}</>;
 }
 
@@ -85,6 +88,8 @@ function AppRoutes() {
           <Route path="/calendario" element={<RequireActive><Calendario /></RequireActive>} />
           <Route path="/config" element={<Config />} />
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
+          <Route path="/admin/compras" element={<RequireAdmin><AdminCompras /></RequireAdmin>} />
+          <Route path="/admin/lembretes" element={<RequireAdmin><AdminLembretes /></RequireAdmin>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
