@@ -93,6 +93,16 @@ export default function Receitas() {
     };
   }, [all]);
 
+  const porCategoria = useMemo(() => {
+    const prefix = `${new Date().getFullYear()}-`;
+    const map = new Map<string, number>();
+    for (const r of all) {
+      if (!dateKey(r.data_recebimento).startsWith(prefix)) continue;
+      map.set(r.categoria || 'Outros', (map.get(r.categoria || 'Outros') ?? 0) + (Number(r.valor) || 0));
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [all]);
+
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     const min = parseMoney(filters.min);
@@ -138,6 +148,8 @@ export default function Receitas() {
         actions={<div className="hidden lg:block"><Button onClick={newReceita}><Plus size={18} /> Nova receita</Button></div>}
       />
 
+      <div className="grid gap-4 lg:gap-5 xl:grid-cols-[380px_minmax(0,1fr)] xl:items-start xl:gap-6">
+      <div className="space-y-4 lg:space-y-5 xl:sticky xl:top-8">
       <Card className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -153,22 +165,48 @@ export default function Receitas() {
             </span>
           )}
         </div>
-        <div className="mt-5 grid divide-y divide-line rounded-xl border border-line bg-bg/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3">
-            <p className="truncate text-[13px] text-muted sm:text-xs">Mês anterior</p>
+        <div className="mt-5 grid divide-y divide-line rounded-xl border border-line bg-bg/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0 xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
+          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3 xl:flex xl:px-3 xl:py-2.5">
+            <p className="truncate text-[13px] text-muted sm:text-xs xl:text-[13px]">Mês anterior</p>
             <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-fg sm:text-base">{formatBRL(kpis.anterior)}</p>
           </div>
-          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3">
-            <p className="truncate text-[13px] text-muted sm:text-xs">Neste ano</p>
+          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3 xl:flex xl:px-3 xl:py-2.5">
+            <p className="truncate text-[13px] text-muted sm:text-xs xl:text-[13px]">Neste ano</p>
             <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-fg sm:text-base">{formatBRL(kpis.ano)}</p>
           </div>
-          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3">
-            <p className="truncate text-[13px] text-muted sm:text-xs">Média mensal</p>
+          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3 xl:flex xl:px-3 xl:py-2.5">
+            <p className="truncate text-[13px] text-muted sm:text-xs xl:text-[13px]">Média mensal</p>
             <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-fg sm:text-base">{formatBRL(kpis.media)}</p>
           </div>
         </div>
       </Card>
 
+      {porCategoria.length > 0 && (
+        <Card className="hidden p-5 xl:block">
+          <p className="text-[15px] font-semibold text-fg">De onde veio</p>
+          <p className="mt-0.5 text-[13px] text-muted">Receitas de {new Date().getFullYear()} por categoria</p>
+          <ul className="mt-4 space-y-3">
+            {porCategoria.map(([nome, valor]) => {
+              const Icon = categoryIcon(nome);
+              return (
+                <li key={nome}>
+                  <div className="mb-1 flex items-center gap-2 text-sm">
+                    <Icon size={15} className="shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 truncate text-fg">{nome}</span>
+                    <span className="font-medium tabular-nums text-fg">{formatBRL(valor)}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-elevated">
+                    <div className="h-full rounded-full bg-pos" style={{ width: `${(valor / porCategoria[0][1]) * 100}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+      </div>
+
+      <div className="min-w-0 space-y-4 lg:space-y-5">
       <div className="flex gap-2">
         <Input
           value={q}
@@ -229,6 +267,8 @@ export default function Receitas() {
           </>
         )}
       </Card>
+      </div>
+      </div>
 
       <Sheet
         open={filtersOpen}

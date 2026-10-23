@@ -89,6 +89,12 @@ export default function Pagamentos() {
 
   const activeFilters = [filters.q, filters.categoria, filters.min, filters.max].filter(Boolean).length;
 
+  const porCategoria = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const d of view.all) map.set(d.categoria || 'Outros', (map.get(d.categoria || 'Outros') ?? 0) + (Number(d.valor) || 0));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [view.all]);
+
   const gerarFixas = useMutation({
     mutationFn: (replace: boolean) => apiFetch('/api/despesas/gerar-fixas', { method: 'POST', body: JSON.stringify({ month, year, replace }) }),
     onSuccess: (res: { createdCount?: number } | null) => {
@@ -178,6 +184,8 @@ export default function Pagamentos() {
         actions={<MonthSwitcher year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m); }} className="w-full lg:w-64" />}
       />
 
+      <div className="grid gap-4 lg:gap-5 xl:grid-cols-[380px_minmax(0,1fr)] xl:items-start xl:gap-6">
+      <div className="space-y-4 lg:space-y-5 xl:sticky xl:top-8">
       {/* Resumo do mês */}
       <Card className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
@@ -203,17 +211,17 @@ export default function Pagamentos() {
           <ProgressBar value={percent(pago, total)} tone="pos" />
         </div>
 
-        <div className="mt-5 grid divide-y divide-line rounded-xl border border-line bg-bg/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3">
-            <p className="truncate text-[13px] text-muted sm:text-xs">Saldo atual</p>
+        <div className="mt-5 grid divide-y divide-line rounded-xl border border-line bg-bg/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0 xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
+          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3 xl:flex xl:px-3 xl:py-2.5">
+            <p className="truncate text-[13px] text-muted sm:text-xs xl:text-[13px]">Saldo atual</p>
             <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-fg sm:text-base">{formatBRL(saldo)}</p>
           </div>
-          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3">
-            <p className="truncate text-[13px] text-muted sm:text-xs">Atrasadas antes</p>
+          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3 xl:flex xl:px-3 xl:py-2.5">
+            <p className="truncate text-[13px] text-muted sm:text-xs xl:text-[13px]">Atrasadas antes</p>
             <p className={cn('mt-0.5 truncate text-sm font-semibold tabular-nums sm:text-base', anterioresTotal > 0 ? 'text-neg' : 'text-fg')}>{formatBRL(anterioresTotal)}</p>
           </div>
-          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3">
-            <p className="truncate text-[13px] text-muted sm:text-xs">{sobra >= 0 ? 'Vai sobrar' : 'Vai faltar'}</p>
+          <div className="flex min-w-0 items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:p-3 xl:flex xl:px-3 xl:py-2.5">
+            <p className="truncate text-[13px] text-muted sm:text-xs xl:text-[13px]">{sobra >= 0 ? 'Vai sobrar' : 'Vai faltar'}</p>
             <p className={cn('mt-0.5 truncate text-sm font-semibold tabular-nums sm:text-base', sobra >= 0 ? 'text-pos' : 'text-neg')}>{formatBRL(Math.abs(sobra))}</p>
           </div>
         </div>
@@ -221,10 +229,10 @@ export default function Pagamentos() {
 
       {/* Ações */}
       <div className="flex items-center gap-2">
-        <Button variant="secondary" onClick={handleGerar} isLoading={gerarFixas.isPending} className="flex-1 sm:flex-none">
+        <Button variant="secondary" onClick={handleGerar} isLoading={gerarFixas.isPending} className="flex-1 sm:flex-none xl:flex-1">
           <Repeat size={17} /> Gerar fixas do mês
         </Button>
-        <div className="hidden flex-1 sm:block">
+        <div className="hidden flex-1 sm:block xl:hidden">
           <Input
             value={filters.q}
             onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
@@ -242,6 +250,32 @@ export default function Pagamentos() {
         </Button>
       </div>
 
+      {porCategoria.length > 0 && (
+        <Card className="hidden p-5 xl:block">
+          <p className="text-[15px] font-semibold text-fg">Por categoria</p>
+          <p className="mt-0.5 text-[13px] text-muted">Contas de {monthName.toLowerCase()}</p>
+          <ul className="mt-4 space-y-3">
+            {porCategoria.map(([nome, valor]) => {
+              const Icon = categoryIcon(nome);
+              return (
+                <li key={nome}>
+                  <div className="mb-1 flex items-center gap-2 text-sm">
+                    <Icon size={15} className="shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 truncate text-fg">{nome}</span>
+                    <span className="font-medium tabular-nums text-fg">{formatBRL(valor)}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-elevated">
+                    <div className="h-full rounded-full bg-brand" style={{ width: `${(valor / porCategoria[0][1]) * 100}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+      </div>
+
+      <div className="min-w-0 space-y-4 lg:space-y-5">
       {activeFilters > 0 && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm">
           <span className="text-muted">{view.filtered.length} de {view.all.length} contas com os filtros</span>
@@ -249,15 +283,26 @@ export default function Pagamentos() {
         </div>
       )}
 
-      <Segmented
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: 'pendentes', label: 'Pendentes', count: view.pendentes.length },
-          { value: 'pagas', label: 'Pagas', count: view.pagas.length },
-        ]}
-        className="sm:w-80"
-      />
+      <div className="flex items-center gap-3">
+        <Segmented
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'pendentes', label: 'Pendentes', count: view.pendentes.length },
+            { value: 'pagas', label: 'Pagas', count: view.pagas.length },
+          ]}
+          className="w-full sm:w-80"
+        />
+        <div className="ml-auto hidden w-80 xl:block">
+          <Input
+            value={filters.q}
+            onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+            placeholder="Buscar por descrição ou valor"
+            leftIcon={<Search size={17} />}
+            className="h-11 bg-surface"
+          />
+        </div>
+      </div>
 
       {/* Atrasadas de meses anteriores */}
       {tab === 'pendentes' && anteriores.length > 0 && (
@@ -302,6 +347,8 @@ export default function Pagamentos() {
           <div className="divide-y divide-line">{view.pagas.map(renderRow)}</div>
         )}
       </Card>
+      </div>
+      </div>
 
       {/* Filtros */}
       <Sheet

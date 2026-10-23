@@ -14,7 +14,7 @@ import { cn } from '../lib/cn';
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-3 lg:grid-cols-[240px_1fr] lg:gap-8">
+    <section className="grid gap-3 lg:grid-cols-[240px_1fr] lg:gap-8 xl:grid-cols-1 xl:gap-3">
       <div className="px-1 lg:pt-1">
         <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
         {description && <p className="mt-0.5 text-[13px] text-muted">{description}</p>}
@@ -199,6 +199,9 @@ export default function Config() {
         </div>
       )}
 
+      {/* No desktop largo as seções ficam em duas colunas */}
+      <div className="grid gap-6 lg:gap-8 xl:grid-cols-2 xl:items-start">
+      <div className="space-y-6 lg:space-y-8">
       <Section title="Perfil" description="Como você aparece no app.">
         <div className="space-y-4 p-4 sm:p-5">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -235,7 +238,9 @@ export default function Config() {
           control={<Switch checked={!!user?.two_factor_enabled} onChange={toggle2FA} disabled={saving2FA} label="Verificação em duas etapas" />}
         />
       </Section>
+      </div>
 
+      <div className="space-y-6 lg:space-y-8">
       <Section title="Assinatura" description="Plano e pagamento.">
         <div className="p-4 sm:p-5">
           <div className="flex items-start gap-4">
@@ -299,6 +304,8 @@ export default function Config() {
           />
         </div>
       </Section>
+      </div>
+      </div>
 
       <Sheet open={welcome} onClose={() => setWelcome(false)} size="sm" bare>
         <div className="pt-4 text-center sm:pt-6">

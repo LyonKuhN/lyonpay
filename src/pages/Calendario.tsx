@@ -145,8 +145,8 @@ export default function Calendario() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-3 lg:items-start lg:gap-6">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0 space-y-4">
           <Card className="overflow-hidden">
             <div className="grid grid-cols-7 border-b border-line">
               {WEEKDAYS.map((w) => <span key={w} className="py-2.5 text-center text-xs font-medium text-subtle">{w}</span>)}
@@ -168,7 +168,7 @@ export default function Calendario() {
                       type="button"
                       onClick={() => setSelected(key)}
                       className={cn(
-                        'relative flex min-h-14 flex-col items-center gap-1 border-b border-r border-line/60 p-1.5 text-left transition-colors sm:min-h-16 lg:min-h-24 lg:items-stretch lg:p-2',
+                        'relative flex min-h-14 flex-col items-center gap-1 border-b border-r border-line/60 p-1.5 text-left transition-colors sm:min-h-16 lg:min-h-24 lg:items-stretch lg:p-2 xl:min-h-32',
                         (offset + i) % 7 === 6 && 'border-r-0',
                         isSel ? 'bg-brand/10' : 'hover:bg-elevated/60',
                       )}
@@ -179,17 +179,18 @@ export default function Calendario() {
                       )}>
                         {i + 1}
                       </span>
-                      {/* Celular: pontos. Desktop: valores do dia. */}
+                      {/* Celular: pontos. Notebook: totais do dia. Tela larga: nome de cada lançamento. */}
                       <span className="flex gap-1 lg:hidden">
                         {ev?.receitas.length ? <span className="h-1.5 w-1.5 rounded-full bg-pos" /> : null}
                         {ev?.despesas.length ? <span className={cn('h-1.5 w-1.5 rounded-full', pend ? (key < today ? 'bg-neg' : 'bg-warn') : 'bg-subtle')} /> : null}
                         {ev?.lembretes.some((l) => !l.concluido) ? <span className="h-1.5 w-1.5 rounded-full bg-info" /> : null}
                       </span>
-                      <span className="hidden w-full space-y-0.5 lg:block">
+                      <span className="hidden w-full space-y-0.5 lg:block xl:hidden">
                         {ev?.receitas.length ? <span className="block truncate rounded bg-pos/12 px-1 text-[11px] font-medium text-pos tabular-nums">+{formatBRLCompact(sum(ev.receitas)).replace('R$ ', '')}</span> : null}
                         {ev?.despesas.length ? <span className={cn('block truncate rounded px-1 text-[11px] font-medium tabular-nums', pend ? 'bg-warn/14 text-warn' : 'bg-elevated text-muted')}>−{formatBRLCompact(sum(ev.despesas)).replace('R$ ', '')}</span> : null}
                         {ev?.lembretes.some((l) => !l.concluido) ? <span className="block truncate rounded bg-info/12 px-1 text-[11px] font-medium text-info">{ev.lembretes.filter((l) => !l.concluido).length} lembrete(s)</span> : null}
                       </span>
+                      {ev && <DayChips ev={ev} late={key < today} />}
                     </button>
                   );
                 })}
@@ -277,5 +278,31 @@ export default function Calendario() {
       <DespesaDetailSheet despesa={detail} onClose={() => setDetail(null)} onEdit={(d) => setEditTarget({ despesa: d })} />
       <DespesaFormSheet open={!!editTarget} target={editTarget} onClose={() => setEditTarget(null)} />
     </div>
+  );
+}
+
+/** Em telas largas, cada dia lista os lançamentos pelo nome (até 3, depois "+N"). */
+function DayChips({ ev, late }: { ev: DayEvents; late: boolean }) {
+  const chips = [
+    ...ev.receitas.map((r) => ({ id: `r${r.id}`, text: r.descricao, value: `+${formatBRLCompact(Number(r.valor)).replace('R$ ', '')}`, cls: 'bg-pos/12 text-pos' })),
+    ...ev.despesas.map((d) => ({
+      id: `d${d.id}`,
+      text: d.descricao,
+      value: formatBRLCompact(Number(d.valor)).replace('R$ ', ''),
+      cls: d.pago ? 'bg-elevated text-muted line-through decoration-1' : late ? 'bg-neg/12 text-neg' : 'bg-warn/14 text-warn',
+    })),
+    ...ev.lembretes.filter((l) => !l.concluido).map((l) => ({ id: `l${l.id}`, text: l.titulo, value: '', cls: 'bg-info/12 text-info' })),
+  ];
+  if (chips.length === 0) return null;
+  return (
+    <span className="hidden w-full space-y-0.5 xl:block">
+      {chips.slice(0, 3).map((c) => (
+        <span key={c.id} className={cn('flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium', c.cls)}>
+          <span className="min-w-0 flex-1 truncate">{c.text}</span>
+          {c.value && <span className="shrink-0 tabular-nums opacity-80">{c.value}</span>}
+        </span>
+      ))}
+      {chips.length > 3 && <span className="block px-1.5 text-[11px] font-medium text-subtle">+{chips.length - 3} mais</span>}
+    </span>
   );
 }

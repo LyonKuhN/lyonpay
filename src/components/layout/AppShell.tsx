@@ -159,7 +159,8 @@ export default function AppShell() {
         <TopBar title={title} onSearch={() => setSearchOpen(true)} onAccount={() => setAccountOpen(true)} />
 
         <main className="lg:pl-64">
-          <div className="mx-auto w-full max-w-6xl px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">
+          {/* No desktop o conteúdo ocupa toda a largura; o limite só segura monitores muito largos */}
+          <div className="mx-auto w-full max-w-[1760px] px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8 2xl:px-10">
             <motion.div key={location.pathname} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
               <Suspense fallback={<PageSkeleton />}>
                 <Outlet />
