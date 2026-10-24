@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
-import { ArrowRight, Zap, Mail, LayoutDashboard, CreditCard, Check, Star, Shield, TrendingUp, Clock, BarChart3, Users, HelpCircle, ChevronDown, X } from 'lucide-react';
+import { ArrowRight, Zap, Mail, LayoutDashboard, CreditCard, Check, Shield, TrendingUp, Clock, BarChart3, Users, HelpCircle, ChevronDown, X, Upload, PiggyBank, Briefcase, Wallet, Lock, KeyRound, Cookie, EyeOff, Trash2 } from 'lucide-react';
+import { abrirPreferenciasCookies } from '../lib/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 import { GooeyText } from '../components/ui/gooey-text-morphing';
@@ -46,6 +47,7 @@ export default function Landing() {
       const response = await fetch(`${API_BASE_URL}/api/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: formData.email })
       });
       const data = await response.json();
@@ -69,6 +71,7 @@ export default function Landing() {
       const response = await fetch(`${API_BASE_URL}/api/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(formData)
       });
       const data = await response.json();
@@ -84,7 +87,7 @@ export default function Landing() {
           setSuccessMessage(`Código enviado para ${data.email}`);
           return;
         }
-        login(data.token, data.user);
+        login(data.user);
         const from = location.state?.from || '/dashboard';
         navigate(from);
       }
@@ -103,11 +106,12 @@ export default function Landing() {
       const response = await fetch(`${API_BASE_URL}/api/auth/verify-2fa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: formData.email, code: twoFactorCode })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Código inválido');
-      login(data.token, data.user);
+      login(data.user);
       const from = location.state?.from || '/dashboard';
       navigate(from);
     } catch (err: any) {
@@ -128,6 +132,7 @@ export default function Landing() {
       const response = await fetch(`${API_BASE_URL}/api/auth/resend-2fa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: formData.email })
       });
       const data = await response.json();
@@ -156,6 +161,7 @@ export default function Landing() {
       const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: formData.email })
       });
       const data = await response.json();
@@ -187,6 +193,7 @@ export default function Landing() {
         const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
           body: JSON.stringify({ access_token: codeResponse.access_token })
         });
         const data = await response.json();
@@ -199,7 +206,7 @@ export default function Landing() {
           setSuccessMessage(`Código enviado para ${data.email}`);
           return;
         }
-        login(data.token, data.user);
+        login(data.user);
         setIsAuthModalOpen(null);
         const from = location.state?.from || '/dashboard';
         navigate(from);
@@ -216,18 +223,30 @@ export default function Landing() {
   }) : (() => {});
 
   const features = [
-    { icon: <LayoutDashboard className="w-6 h-6" />, title: 'Dashboard Inteligente', desc: 'Veja seu saldo, saúde financeira e próximos vencimentos num único painel visual e intuitivo.' },
-    { icon: <Zap className="w-6 h-6" />, title: 'Automação de Fixas', desc: 'Gere todas as suas contas recorrentes do mês com um único clique. Zero retrabalho.' },
-    { icon: <CreditCard className="w-6 h-6" />, title: 'Controle de Parcelados', desc: 'Acompanhe cada parcela em todos os meses futuros. Saiba exatamente seu comprometimento real.' },
-    { icon: <BarChart3 className="w-6 h-6" />, title: 'Análise por Categoria', desc: 'Descubra onde você gasta mais com gráficos e rankings automáticos de despesas.' },
-    { icon: <Clock className="w-6 h-6" />, title: 'Alertas de Vencimento', desc: 'Nunca mais pague juros. O sistema avisa com antecedência e destaca o que está atrasado.' },
-    { icon: <Shield className="w-6 h-6" />, title: 'Dados 100% Seguros', desc: 'Criptografia de ponta a ponta. Seus dados financeiros protegidos e nunca compartilhados.' },
+    { icon: <LayoutDashboard className="w-6 h-6" />, title: 'Visão do mês', desc: 'Saldo, contas a pagar, o que entra e a projeção dos próximos 6 meses numa tela só.' },
+    { icon: <Zap className="w-6 h-6" />, title: 'Contas fixas automáticas', desc: 'Aluguel, internet e assinaturas aparecem sozinhas todo mês. Receitas recorrentes também.' },
+    { icon: <CreditCard className="w-6 h-6" />, title: 'Contas, cartões e faturas', desc: 'Saldo por conta, transferências e a fatura do cartão com fechamento e vencimento certos.' },
+    { icon: <Upload className="w-6 h-6" />, title: 'Importe o extrato', desc: 'Arquivos OFX e CSV do seu banco, com categorias por regra e sem lançamento repetido.' },
+    { icon: <PiggyBank className="w-6 h-6" />, title: 'Orçamentos e metas', desc: 'Limite por categoria com aviso aos 80% e metas com acompanhamento dos aportes.' },
+    { icon: <BarChart3 className="w-6 h-6" />, title: 'Relatórios em PDF e Excel', desc: 'Mês a mês por categoria, resultado do período e evolução dos gastos para exportar.' },
+    { icon: <Clock className="w-6 h-6" />, title: 'Alertas de vencimento', desc: 'Aviso por e-mail e notificação no celular antes de cada conta vencer.' },
+    { icon: <Users className="w-6 h-6" />, title: 'Conta compartilhada', desc: 'Convide quem divide as contas com você, com acesso para editar ou só para ver.' },
+    { icon: <Briefcase className="w-6 h-6" />, title: 'Modo PJ / MEI', desc: 'Separe o que é da empresa e o que é pessoal sem precisar de outra conta.' },
   ];
 
-  const testimonials = [
-    { name: 'Marina S.', role: 'Empreendedora', text: 'Em 2 semanas já identifiquei R$ 800 em gastos desnecessários que eu nem sabia que tinha.', rating: 5 },
-    { name: 'Carlos M.', role: 'Servidor Público', text: 'Nunca mais esqueci uma conta. O alerta de vencimento mudou completamente minha relação com dinheiro.', rating: 5 },
-    { name: 'Fernanda L.', role: 'Freelancer', text: 'A automação das fixas economiza meu tempo todo mês. Simplesmente indispensável.', rating: 5 },
+  const publicos = [
+    { icon: <Wallet className="w-6 h-6" />, title: 'Para você', desc: 'Organize salário, contas fixas, cartão e parcelas e saiba quanto sobra até o fim do mês.' },
+    { icon: <Users className="w-6 h-6" />, title: 'Para o casal ou a família', desc: 'Um espaço só para as contas da casa, com cada pessoa entrando com o próprio login.' },
+    { icon: <Briefcase className="w-6 h-6" />, title: 'Para quem é MEI ou autônomo', desc: 'Receitas e despesas da empresa separadas das pessoais, com relatório para fechar o mês.' },
+  ];
+
+  const seguranca = [
+    { icon: <Lock className="w-5 h-5" />, title: 'Conexão HTTPS', desc: 'Todo o tráfego entre você e o Lyonk é cifrado.' },
+    { icon: <KeyRound className="w-5 h-5" />, title: 'Senhas com bcrypt', desc: 'Guardamos só o hash da senha, nunca a senha.' },
+    { icon: <Shield className="w-5 h-5" />, title: 'Verificação em duas etapas', desc: 'Código por e-mail a cada novo acesso, se você ativar.' },
+    { icon: <Cookie className="w-5 h-5" />, title: 'Sessão protegida', desc: 'Cookie inacessível a scripts, com expiração automática.' },
+    { icon: <EyeOff className="w-5 h-5" />, title: 'Sem venda de dados', desc: 'Seus dados não são vendidos nem usados para anúncios.' },
+    { icon: <Trash2 className="w-5 h-5" />, title: 'Você no controle', desc: 'Exporte tudo ou apague a conta quando quiser.' },
   ];
 
   const faqs = [
@@ -245,11 +264,19 @@ export default function Landing() {
     },
     {
       question: 'Meus dados financeiros estão seguros no Lyonk?',
-      answer: 'Sim, a segurança é nossa prioridade máxima. Toda a plataforma opera sob protocolo seguro HTTPS, com dados criptografados de ponta a ponta e senhas em hashes de alta segurança. Seus dados nunca são comercializados.'
+      answer: 'Toda a comunicação usa HTTPS, as senhas são guardadas com hash bcrypt, a sessão fica em um cookie protegido e você pode ativar a verificação em duas etapas. Seus dados não são vendidos nem compartilhados com terceiros.'
+    },
+    {
+      question: 'O Lyonk se conecta ao meu banco?',
+      answer: 'Você importa o extrato do banco ou do cartão em OFX ou CSV, que quase todo banco oferece. O Lyonk categoriza pelas suas regras e ignora o que já foi lançado, então dá para importar o mesmo arquivo de novo sem duplicar nada.'
+    },
+    {
+      question: 'Dá para usar com outra pessoa?',
+      answer: 'Sim. Você convida alguém pelo e-mail e escolhe se ela pode editar ou só ver. Cada pessoa entra com o próprio login.'
     },
     {
       question: 'Posso cancelar minha assinatura a qualquer momento?',
-      answer: 'Com certeza. Não exigimos fidelidade nem contrato de permanência. Você pode cancelar sua assinatura diretamente pelas configurações da sua conta a qualquer momento.'
+      answer: 'Sim, sem fidelidade. Em Ajustes você abre o portal de pagamento para cancelar, trocar o cartão ou baixar as faturas. O acesso continua até o fim do período já pago.'
     }
   ];
 
@@ -273,7 +300,7 @@ export default function Landing() {
             <a href="#recursos" className="hover:text-fg transition-colors">Recursos</a>
             <a href="#como-funciona" className="hover:text-fg transition-colors">Como Funciona</a>
             <a href="#precos" className="hover:text-fg transition-colors">Preços</a>
-            <a href="#depoimentos" className="hover:text-fg transition-colors">Depoimentos</a>
+            <a href="#para-quem" className="hover:text-fg transition-colors">Para quem é</a>
             <a href="#faq" className="hover:text-fg transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-3">
@@ -360,7 +387,7 @@ export default function Landing() {
                 <IPhoneMockup 
                   model="15-pro" 
                   color="space-black" 
-                  wallpaper="/cel1.png" 
+                  wallpaper="/cel1.webp" 
                   wallpaperFit="contain"
                   scale={0.85} 
                 />
@@ -400,7 +427,7 @@ export default function Landing() {
                     <IPhoneMockup 
                       model="15-pro" 
                       color="space-black" 
-                      wallpaper="/cel1.png" 
+                      wallpaper="/cel1.webp" 
                       wallpaperFit="contain"
                       scale={0.85} 
                     />
@@ -429,10 +456,10 @@ export default function Landing() {
         >
           <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { value: '2.400+', label: 'Usuários Ativos' },
-              { value: 'R$ 18M+', label: 'Gerenciados' },
-              { value: '4.9 ★', label: 'Avaliação' },
-              { value: '97%', label: 'Satisfação' },
+              { value: '7 dias', label: 'Grátis, sem cartão' },
+              { value: 'R$ 17', label: 'Por mês, sem fidelidade' },
+              { value: 'OFX e CSV', label: 'Importação de extrato' },
+              { value: 'PDF e Excel', label: 'Relatórios para exportar' },
             ].map((s, i) => (
               <div key={i}>
                 <p className="text-3xl md:text-4xl font-bold text-brand mb-2">{s.value}</p>
@@ -527,8 +554,12 @@ export default function Landing() {
             <div className="relative w-full rounded-[24px] border border-line-strong bg-surface/50 p-2 md:p-4 shadow-2xl">
               <div className="absolute inset-0 bg-brand/5 blur-[80px] md:blur-[120px] rounded-full pointer-events-none z-0" />
               <img 
-                src="/pc.png" 
-                alt="Interface do Dashboard de Controle Financeiro Lyonk em Computador" 
+                src="/pc.webp" 
+                width={1920}
+                height={1080}
+                loading="lazy"
+                decoding="async"
+                alt="Tela inicial do Lyonk no computador: saldo por conta, projeção de caixa e contas a pagar" 
                 className="w-full h-auto object-cover rounded-xl border border-line-strong relative z-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]" 
               />
               
@@ -580,7 +611,7 @@ export default function Landing() {
             </div>
             <div className="max-w-md mx-auto p-10 rounded-[16px] bg-surface border border-brand/20">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand/15 border border-brand/30 text-brand text-[10px] font-bold uppercase tracking-widest mb-6">
-                <Zap size={10} /> Mais popular
+                <Zap size={10} /> Plano único
               </div>
               <h3 className="text-muted font-bold text-xs uppercase tracking-widest mb-2">Plano Pro</h3>
               <div className="flex items-end gap-2 mb-8">
@@ -589,8 +620,9 @@ export default function Landing() {
               </div>
               <div className="space-y-3 mb-8">
                 {[
-                  'Dashboard completo', 'Despesas e receitas ilimitadas', 'Automação de contas fixas',
-                  'Controle de parcelados', 'Alertas de vencimento', 'Suporte prioritário'
+                  'Lançamentos ilimitados', 'Contas fixas e receitas recorrentes automáticas', 'Contas, cartões e faturas',
+                  'Importação de extrato OFX e CSV', 'Orçamentos, metas e relatórios', 'Alertas por e-mail e no celular',
+                  'Conta compartilhada e modo PJ / MEI'
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-brand/15 flex items-center justify-center shrink-0">
@@ -611,39 +643,36 @@ export default function Landing() {
           </div>
         </motion.section>
 
-        {/* Testimonials */}
-        <motion.section 
+        {/* Para quem é */}
+        <motion.section
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8 }}
-          id="depoimentos" 
+          id="para-quem"
           className="py-16 md:py-24 px-6 bg-surface/30 backdrop-blur-sm relative z-10"
         >
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
-              <p className="text-brand text-xs font-bold uppercase tracking-widest mb-3">Histórias de sucesso</p>
-              <h2 className="text-3xl md:text-5xl font-bold text-fg tracking-tight">Veja o impacto real na vida das pessoas</h2>
+              <p className="text-brand text-xs font-bold uppercase tracking-widest mb-3">Para quem é</p>
+              <h2 className="text-3xl md:text-5xl font-bold text-fg tracking-tight">Um app, do jeito que a sua vida financeira é</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {testimonials.map((t, i) => (
+              {publicos.map((p, i) => (
                 <article key={i} className="p-8 rounded-[16px] bg-surface border border-line-strong hover:border-brand/20 transition-all">
-                  <div className="flex gap-1 mb-4">
-                    {Array.from({ length: t.rating }).map((_, j) => <Star key={j} className="w-4 h-4 fill-brand text-brand" />)}
+                  <div className="w-12 h-12 rounded-[12px] bg-brand/15 flex items-center justify-center text-brand mb-6">
+                    {p.icon}
                   </div>
-                  <p className="text-fg/70 leading-relaxed text-sm mb-6 italic">"{t.text}"</p>
-                  <div>
-                    <h3 className="text-fg font-bold text-sm">{t.name}</h3>
-                    <p className="text-muted text-xs uppercase tracking-widest">{t.role}</p>
-                  </div>
+                  <h3 className="text-lg font-bold text-fg mb-3">{p.title}</h3>
+                  <p className="text-muted leading-relaxed text-sm">{p.desc}</p>
                 </article>
               ))}
             </div>
           </div>
         </motion.section>
 
-        {/* Security Section */}
-        <motion.section 
+        {/* Segurança: só o que de fato existe */}
+        <motion.section
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
@@ -652,16 +681,19 @@ export default function Landing() {
         >
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <p className="text-brand text-xs font-bold uppercase tracking-widest mb-3">Confiança total</p>
-              <h2 className="text-3xl md:text-5xl font-bold text-fg tracking-tight mb-4">Segurança financeira em primeiro lugar</h2>
+              <p className="text-brand text-xs font-bold uppercase tracking-widest mb-3">Segurança</p>
+              <h2 className="text-3xl md:text-5xl font-bold text-fg tracking-tight mb-4">Como cuidamos dos seus dados</h2>
             </div>
-            
-            <div className="h-[300px] md:h-[400px] rounded-[20px] overflow-hidden bg-brand flex flex-col items-center justify-center gap-4 p-6">
-              <Shield className="w-16 h-16 text-on-brand" />
-              <div className="text-center">
-                <h3 className="text-2xl md:text-3xl font-bold text-on-brand mb-2">Criptografia de Ponta a Ponta</h3>
-                <p className="text-on-brand/80 text-sm max-w-lg">Seus dados financeiros protegidos com os padrões mais altos de segurança e privacidade.</p>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {seguranca.map((s, i) => (
+                <div key={i} className="flex items-start gap-4 p-5 rounded-[16px] bg-surface border border-line-strong">
+                  <span className="w-10 h-10 shrink-0 rounded-[10px] bg-brand/15 flex items-center justify-center text-brand">{s.icon}</span>
+                  <div>
+                    <h3 className="font-bold text-fg text-[15px]">{s.title}</h3>
+                    <p className="text-muted text-sm leading-relaxed mt-0.5">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </motion.section>
@@ -734,7 +766,7 @@ export default function Landing() {
               Pronto para assumir o<br />
               <span className="text-brand">controle do seu dinheiro?</span>
             </h2>
-            <p className="text-muted text-lg mb-10">Junte-se a milhares de pessoas que já transformaram suas finanças com o Lyonk.</p>
+            <p className="text-muted text-lg mb-10">Crie sua conta em menos de um minuto e teste tudo por 7 dias, sem cartão.</p>
             <button
               onClick={() => setIsAuthModalOpen('register')}
               className="px-8 py-3 bg-brand text-on-brand font-bold rounded-full hover:opacity-90 transition-all inline-flex items-center gap-2"
@@ -755,6 +787,7 @@ export default function Landing() {
           <p className="text-muted text-sm">© 2026 Lyonk. Todos os direitos reservados.</p>
           <div className="flex gap-6 text-muted text-sm">
             <Link to="/politica-de-privacidade" className="hover:text-fg transition-colors">Privacidade & Termos</Link>
+            <button type="button" onClick={abrirPreferenciasCookies} className="hover:text-fg transition-colors">Cookies</button>
           </div>
         </div>
       </footer>

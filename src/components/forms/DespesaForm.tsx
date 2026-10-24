@@ -8,12 +8,14 @@ import { Field, Input, MoneyInput, Select, Textarea, fieldClass } from '../ui/in
 import { Badge, Segmented, Switch } from '../ui/primitives';
 import { CategoriaSheet } from './CategoriaSheet';
 import { apiFetch } from '../../services/api';
-import { invalidateFinance, useCategorias } from '../../hooks/queries';
+import { invalidateFinance, useCartoes, useCategorias, useContas } from '../../hooks/queries';
+import { useEspaco } from '../../contexts/EspacoContext';
+import { somarMeses, vencimentoFatura } from '../../lib/fatura';
 import { cn } from '../../lib/cn';
 import {
-  dateKey, daysInMonth, formatBRL, formatDate, parseDateOnly, parseMoney, toISODate, todayISO, toMoneyInput,
+  dateKey, daysInMonth, formatBRL, formatDate, MONTHS, parseDateOnly, parseMoney, todayISO, toMoneyInput,
 } from '../../lib/format';
-import { normalizeTipo, TIPO_LABEL, type Despesa, type TipoDespesa } from '../../lib/types';
+import { normalizeTipo, TIPO_LABEL, type Despesa, type Escopo, type TipoDespesa } from '../../lib/types';
 
 export interface DespesaFormTarget {
   /** Lançamento, parcela avulsa ou modelo fixo a editar. */
@@ -22,11 +24,13 @@ export interface DespesaFormTarget {
   group?: Despesa[];
   /** Tipo inicial ao criar. */
   tipo?: TipoDespesa;
+  /** Já abre como compra no cartão (primeiro cartão ativo). */
+  cartao?: boolean;
 }
 
 type Payload = Record<string, unknown>;
 type SaveJob =
-  | { kind: 'create'; payload: Payload; tipo: TipoDespesa }
+  | { kind: 'create'; payload: Payload; tipo: TipoDespesa; lancarMes?: { year: number; month: number } }
   | { kind: 'update'; id: string; payload: Payload; tipo: TipoDespesa }
   | { kind: 'group'; items: Array<{ id: string; payload: Payload }>; tipo: TipoDespesa };
 
@@ -34,13 +38,7 @@ const stripParcela = (d: string) => d.replace(/\s*\(\d+\/\d+\)$/, '');
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const byParcela = (a: Despesa, b: Despesa) => (a.parcela_atual ?? 0) - (b.parcela_atual ?? 0);
 
-/** Soma meses mantendo o dia; se o mês não tem esse dia, usa o último (31/01 → 28/02). */
-function addMonths(iso: string, n: number): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const target = new Date(y, m - 1 + n, 1);
-  target.setDate(Math.min(d, daysInMonth(target.getFullYear(), target.getMonth() + 1)));
-  return toISODate(target);
-}
+const addMonths = somarMeses;
 
 /** O modelo fixo só guarda o dia; escolhe um mês em que esse dia exista (31 não vira dia 1º). */
 function modelDateForDay(day: number): string {
@@ -56,7 +54,7 @@ function modelDateForDay(day: number): string {
 
 const TIPO_HINT: Record<TipoDespesa, string> = {
   variavel: 'Gasto pontual, com data definida.',
-  fixa: 'Modelo que se repete todo mês. As contas do mês são geradas em Contas.',
+  fixa: 'Modelo que se repete todo mês. As contas de cada mês saem dele.',
   parcelada: 'Compra dividida em parcelas mensais.',
 };
 
@@ -77,7 +75,11 @@ export function DespesaFormSheet({ open, onClose, target, onSaved, onDelete }: S
 
   const save = useMutation({
     mutationFn: async (job: SaveJob) => {
-      if (job.kind === 'create') return apiFetch('/api/despesas', { method: 'POST', body: JSON.stringify(job.payload) });
+      if (job.kind === 'create') {
+        const criada = await apiFetch('/api/despesas', { method: 'POST', body: JSON.stringify(job.payload) });
+        if (job.lancarMes && criada?.id) await apiFetch(`/api/despesas/${criada.id}/lancar-mes`, { method: 'POST', body: JSON.stringify(job.lancarMes) });
+        return criada;
+      }
       if (job.kind === 'update') return apiFetch(`/api/despesas/${job.id}`, { method: 'PUT', body: JSON.stringify(job.payload) });
       return Promise.all(job.items.map((it) => apiFetch(`/api/despesas/${it.id}`, { method: 'PUT', body: JSON.stringify(it.payload) })));
     },
@@ -85,7 +87,12 @@ export function DespesaFormSheet({ open, onClose, target, onSaved, onDelete }: S
       invalidateFinance(qc);
       const created = job.kind === 'create';
       if (created && job.tipo === 'fixa') {
-        toast.success('Modelo fixo salvo. Gere as contas do mês em Contas.', { duration: 5000 });
+        toast.success(
+          job.kind === 'create' && job.lancarMes
+            ? `Modelo fixo salvo e lançado em ${MONTHS[job.lancarMes.month - 1].toLowerCase()}`
+            : 'Modelo fixo salvo. Ele entra nas contas quando o mês for gerado.',
+          { duration: 5000 },
+        );
       } else {
         toast.success(created ? 'Despesa adicionada' : 'Alterações salvas');
       }
@@ -131,6 +138,9 @@ export function DespesaFormSheet({ open, onClose, target, onSaved, onDelete }: S
 
 function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target: DespesaFormTarget; onSubmit: (job: SaveJob) => void }) {
   const { data: categorias = [] } = useCategorias('despesa');
+  const { data: contas = [] } = useContas();
+  const { data: cartoes = [] } = useCartoes();
+  const { visao, modoEmpresa } = useEspaco();
   const d = target.despesa;
   const group = target.group ? [...target.group].sort(byParcela) : undefined;
   const editing = !!(d || group);
@@ -141,7 +151,16 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
   const [tipo, setTipo] = useState<TipoDespesa>(group ? 'parcelada' : d ? normalizeTipo(d.tipo) : target.tipo ?? 'variavel');
   const [descricao, setDescricao] = useState(first ? (group ? stripParcela(first.descricao) : first.descricao) : '');
   const [categoria, setCategoria] = useState(first?.categoria || '');
-  const [data, setData] = useState(first ? dateKey(first.data_vencimento) : todayISO());
+  // Compra no cartão: a data do formulário é a da compra; o vencimento sai da fatura
+  const [data, setData] = useState(first ? dateKey(first.cartao_id && first.data_compra ? first.data_compra : first.data_vencimento) : todayISO());
+  const [origem, setOrigem] = useState(() => {
+    if (first?.cartao_id) return `cartao:${first.cartao_id}`;
+    if (first?.conta_id) return `conta:${first.conta_id}`;
+    const primeiro = target.cartao ? cartoes.find((c) => c.ativo) : undefined;
+    return primeiro ? `cartao:${primeiro.id}` : '';
+  });
+  const [escopo, setEscopo] = useState<Escopo>(first?.escopo || (visao !== 'tudo' ? visao : 'pessoal'));
+  const [lancarMes, setLancarMes] = useState(true);
   const [dia, setDia] = useState(String(parseDateOnly(first?.data_vencimento)?.getDate() ?? new Date().getDate()));
   const [parcelas, setParcelas] = useState(group ? String(totalParcelas) : '2');
   const [valorMode, setValorMode] = useState<'parcela' | 'total'>('parcela');
@@ -165,8 +184,14 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
   const amount = parseMoney(valor);
   const perParcela = valorMode === 'total' ? round2(amount / count) : amount;
   const total = valorMode === 'total' ? amount : round2(amount * count);
-  const autoDates = Array.from({ length: count }, (_, i) => addMonths(data || todayISO(), i));
-  const dates = useCustom ? customDates : autoDates;
+  const cartao = origem.startsWith('cartao:') ? cartoes.find((c) => c.id === origem.slice(7)) : undefined;
+  const contaId = origem.startsWith('conta:') ? origem.slice(6) : null;
+  const vencCartao = cartao && data ? vencimentoFatura(data, cartao.dia_fechamento, cartao.dia_vencimento) : null;
+  const autoDates = Array.from({ length: count }, (_, i) => addMonths(vencCartao || data || todayISO(), i));
+  const dates = useCustom && !cartao ? customDates : autoDates;
+  const contasAtivas = contas.filter((c) => c.ativo || c.id === contaId);
+  const cartoesAtivos = cartoes.filter((c) => c.ativo || c.id === cartao?.id);
+  const agora = new Date();
 
   const resizeDates = (n: number, base: string) => {
     setCustomDates((prev) => Array.from({ length: n }, (_, i) => prev[i] || addMonths(base || todayISO(), i)));
@@ -178,7 +203,14 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
     if (!descricao.trim()) return setError('Informe uma descrição.');
     if (!(amount > 0)) return setError('Informe um valor maior que zero.');
 
-    const base = { descricao: descricao.trim(), observacoes: obs.trim(), categoria: effectiveCategoria };
+    const base = {
+      descricao: descricao.trim(),
+      observacoes: obs.trim(),
+      categoria: effectiveCategoria,
+      conta_id: contaId,
+      cartao_id: cartao?.id ?? null,
+      escopo,
+    };
 
     if (group) {
       if (customDates.some((x) => !x)) return setError('Preencha a data de todas as parcelas.');
@@ -194,6 +226,7 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
             valor_total: total.toFixed(2),
             numero_parcelas: totalParcelas,
             data_vencimento: customDates[i],
+            data_compra: cartao ? dateKey(p.data_compra) || null : null,
             tipo: 'parcelada',
             usa_media: false,
           },
@@ -215,7 +248,9 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
         valor_total: '',
         usa_media: usaMedia,
       };
-      onSubmit(editing ? { kind: 'update', id: d!.id, payload, tipo: 'fixa' } : { kind: 'create', payload, tipo: 'fixa' });
+      onSubmit(editing
+        ? { kind: 'update', id: d!.id, payload, tipo: 'fixa' }
+        : { kind: 'create', payload, tipo: 'fixa', lancarMes: lancarMes ? { year: agora.getFullYear(), month: agora.getMonth() + 1 } : undefined });
       return;
     }
 
@@ -231,7 +266,8 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
           valor_total: total.toFixed(2),
           numero_parcelas: count,
           data_vencimento: dates[0],
-          datas_personalizadas: dates,
+          data_compra: cartao ? data : null,
+          datas_personalizadas: cartao ? undefined : dates,
           tipo: 'parcelada',
           usa_media: false,
         },
@@ -239,11 +275,14 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
       return;
     }
 
-    if (!data) return setError('Informe a data de vencimento.');
+    if (!data) return setError(cartao ? 'Informe a data da compra.' : 'Informe a data de vencimento.');
+    const mudouCompra = !!cartao && (dateKey(d?.data_compra) !== data || d?.cartao_id !== cartao.id);
     const payload = {
       ...base,
       valor: amount.toFixed(2),
-      data_vencimento: data,
+      data_vencimento: cartao ? (d && !mudouCompra ? dateKey(d.data_vencimento) : vencCartao) : data,
+      data_compra: cartao ? data : null,
+      recalcular_fatura: mudouCompra,
       tipo: d?.tipo || 'variavel',
       numero_parcelas: d?.numero_parcelas ?? '',
       valor_total: d?.valor_total ?? '',
@@ -315,9 +354,31 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
         {catOptions.map((nome) => <option key={nome} value={nome}>{nome}</option>)}
       </Select>
 
+      {(contasAtivas.length > 0 || cartoesAtivos.length > 0) && (
+        <Select label="Pagar com" value={origem} onChange={(e) => setOrigem(e.target.value)}>
+          <option value="">Não informar</option>
+          {contasAtivas.length > 0 && (
+            <optgroup label="Contas">
+              {contasAtivas.map((c) => <option key={c.id} value={`conta:${c.id}`}>{c.nome}</option>)}
+            </optgroup>
+          )}
+          {cartoesAtivos.length > 0 && (
+            <optgroup label="Cartões de crédito">
+              {cartoesAtivos.map((c) => <option key={c.id} value={`cartao:${c.id}`}>{c.nome}</option>)}
+            </optgroup>
+          )}
+        </Select>
+      )}
+
+      {modoEmpresa && (
+        <Field label="Escopo">
+          <Segmented value={escopo} onChange={setEscopo} options={[{ value: 'pessoal', label: 'Pessoal' }, { value: 'empresa', label: 'Empresa' }]} />
+        </Field>
+      )}
+
       {showDia && (
         <Input
-          label="Dia do vencimento"
+          label={cartao ? 'Dia da cobrança no cartão' : 'Dia do vencimento'}
           type="number"
           inputMode="numeric"
           min={1}
@@ -330,7 +391,14 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
       )}
 
       {!showDia && !group && !isNewParcelada && (
-        <Input label="Vencimento" type="date" value={data} onChange={(e) => setData(e.target.value)} required />
+        <Input
+          label={cartao ? 'Data da compra' : 'Vencimento'}
+          type="date"
+          value={data}
+          onChange={(e) => setData(e.target.value)}
+          hint={cartao && vencCartao ? `Entra na fatura que vence em ${formatDate(vencCartao)}.` : undefined}
+          required
+        />
       )}
 
       {isNewParcelada && (
@@ -349,7 +417,7 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
             required
           />
           <Input
-            label="1ª parcela"
+            label={cartao ? 'Data da compra' : '1ª parcela'}
             type="date"
             value={data}
             onChange={(e) => {
@@ -366,6 +434,7 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
           <p className="font-semibold text-fg tabular-nums">{count}× de {formatBRL(perParcela)}</p>
           <p className="mt-0.5 text-[13px] text-muted tabular-nums">
             Total {formatBRL(total)}
+            {cartao && dates[0] && <> · 1ª na fatura de {formatDate(dates[0])}</>}
             {dates[count - 1] && <> · última em {formatDate(dates[count - 1])}</>}
           </p>
         </div>
@@ -373,7 +442,7 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
 
       {tipo === 'parcelada' && (
         <div className="space-y-3">
-          {isNewParcelada && (
+          {isNewParcelada && !cartao && (
             <button
               type="button"
               onClick={() => {
@@ -390,7 +459,7 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
               {useCustom ? 'Usando datas escolhidas' : 'Escolher a data de cada parcela'}
             </button>
           )}
-          {useCustom && (
+          {useCustom && !(isNewParcelada && cartao) && (
             <Field label={group ? 'Datas das parcelas' : undefined}>
               <div className="space-y-2 rounded-xl border border-line bg-bg/60 p-3">
                 {customDates.map((date, i) => (
@@ -409,6 +478,16 @@ function DespesaFormBody({ formId, target, onSubmit }: { formId: string; target:
               </div>
             </Field>
           )}
+        </div>
+      )}
+
+      {showDia && !editing && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-line px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-fg">Lançar já em {MONTHS[agora.getMonth()].toLowerCase()}</p>
+            <p className="mt-0.5 text-[13px] text-subtle">Cria a conta deste mês agora. Os próximos meses saem do modelo.</p>
+          </div>
+          <Switch checked={lancarMes} onChange={setLancarMes} label="Lançar já neste mês" />
         </div>
       )}
 

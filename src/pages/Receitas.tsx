@@ -2,9 +2,13 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ArrowDown, ArrowDownLeft, ArrowUp, ChevronDown, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { ArrowDown, ArrowDownLeft, ArrowUp, CalendarClock, ChevronDown, Plus, Repeat, Search, SlidersHorizontal, X } from 'lucide-react';
 import { apiFetch } from '../services/api';
-import { invalidateFinance, useCategorias, useReceitas } from '../hooks/queries';
+import { invalidateFinance, useCategorias, useContas, useReceitas, useRecorrentes } from '../hooks/queries';
+import { useEspaco } from '../contexts/EspacoContext';
+import { AnimatedNumber, SaidaSuave } from '../components/ui/motion';
+import { Badge, Switch } from '../components/ui/primitives';
 import { useQuickActions } from '../components/layout/AppShell';
 import { useConfirm } from '../components/ui/confirm';
 import { Button } from '../components/ui/button';
@@ -15,8 +19,8 @@ import { ListGroupHeader, TxRow } from '../components/finance/TxRow';
 import { ReceitaFormSheet } from '../components/forms/ReceitaForm';
 import { categoryIcon } from '../lib/categories';
 import { cn } from '../lib/cn';
-import { dateKey, formatBRL, formatDayMonth, MONTHS, parseMoney } from '../lib/format';
-import type { Receita } from '../lib/types';
+import { dateKey, dueStatus, formatBRL, formatDayMonth, MONTHS, parseMoney, todayISO, toMoneyInput } from '../lib/format';
+import type { Receita, ReceitaRecorrente } from '../lib/types';
 
 interface Filters { categoria: string; de: string; ate: string; min: string; max: string }
 const EMPTY: Filters = { categoria: '', de: '', ate: '', min: '', max: '' };
@@ -31,6 +35,10 @@ export default function Receitas() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [months, setMonths] = useState(6);
   const [editing, setEditing] = useState<Receita | null>(null);
+  const [editRec, setEditRec] = useState<ReceitaRecorrente | null>(null);
+  const [novaRec, setNovaRec] = useState(false);
+  const [recebendo, setRecebendo] = useState<Receita | null>(null);
+  const { somenteLeitura } = useEspaco();
   const { newReceita } = useQuickActions();
   const confirm = useConfirm();
   const qc = useQueryClient();
@@ -45,7 +53,40 @@ export default function Receitas() {
 
   const receitasQ = useReceitas();
   const { data: categorias = [] } = useCategorias('receita');
-  const all = useMemo(() => receitasQ.data ?? [], [receitasQ.data]);
+  const recorrentesQ = useRecorrentes();
+  // O que ainda vai entrar fica separado do que já entrou
+  const all = useMemo(() => (receitasQ.data ?? []).filter((r) => !r.pendente), [receitasQ.data]);
+  const aReceber = useMemo(
+    () => (receitasQ.data ?? []).filter((r) => r.pendente).sort((a, b) => dateKey(a.data_recebimento).localeCompare(dateKey(b.data_recebimento))),
+    [receitasQ.data],
+  );
+  const recorrentes = recorrentesQ.data ?? [];
+
+  const toggleRec = useMutation({
+    mutationFn: (r: ReceitaRecorrente) => apiFetch(`/api/recorrentes/${r.id}`, { method: 'PUT', body: JSON.stringify({ ...r, ativo: !r.ativo }) }),
+    onSuccess: () => invalidateFinance(qc),
+    onError: (err: Error) => toast.error(err.message || 'Não foi possível salvar'),
+  });
+
+  const removeRec = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/recorrentes/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      invalidateFinance(qc);
+      toast.success('Receita recorrente excluída');
+      setEditRec(null);
+    },
+    onError: (err: Error) => toast.error(err.message || 'Não foi possível excluir'),
+  });
+
+  const askDeleteRec = async (r: ReceitaRecorrente) => {
+    const ok = await confirm({
+      title: 'Excluir receita recorrente?',
+      description: <><strong className="text-fg">{r.descricao}</strong> deixa de entrar nos próximos meses. O que já foi lançado continua.</>,
+      confirmText: 'Excluir',
+      danger: true,
+    });
+    if (ok) removeRec.mutate(r.id);
+  };
 
   const remove = useMutation({
     mutationFn: (id: string) => apiFetch(`/api/receitas/${id}`, { method: 'DELETE' }),
@@ -155,7 +196,7 @@ export default function Receitas() {
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-muted">Recebido em {kpis.mesNome}</p>
             {receitasQ.isLoading ? <Skeleton className="mt-2 h-9 w-40" /> : (
-              <p className="mt-1 text-[30px] font-semibold leading-tight tracking-tight tabular-nums text-fg sm:text-[34px]">{formatBRL(kpis.mes)}</p>
+              <AnimatedNumber value={kpis.mes} format={(n) => formatBRL(n)} className="mt-1 block text-[30px] font-semibold leading-tight tracking-tight text-fg sm:text-[34px]" />
             )}
           </div>
           {kpis.diff !== null && (
@@ -179,6 +220,42 @@ export default function Receitas() {
             <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-fg sm:text-base">{formatBRL(kpis.media)}</p>
           </div>
         </div>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-4 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold text-fg">Recorrentes</p>
+            <p className="text-[13px] text-muted">Entram sozinhas todo mês, como "a receber"</p>
+          </div>
+          {!somenteLeitura && (
+            <Button variant="secondary" size="sm" onClick={() => setNovaRec(true)}><Plus size={15} /> Nova</Button>
+          )}
+        </div>
+        {recorrentes.length === 0 ? (
+          <p className="px-4 pb-4 text-[13px] text-subtle sm:px-5">Cadastre salário, pró-labore ou aluguel recebido para não digitar todo mês.</p>
+        ) : (
+          <div className="divide-y divide-line border-t border-line">
+            {recorrentes.map((r) => (
+              <TxRow
+                key={r.id}
+                icon={Repeat}
+                tone={r.ativo ? 'pos' : 'neutral'}
+                title={r.descricao}
+                subtitle={<span>Todo dia {r.dia} · {r.categoria || 'Outros'}</span>}
+                amount={formatBRL(r.valor)}
+                amountTone={r.ativo ? 'pos' : 'fg'}
+                dim={!r.ativo}
+                meta={!somenteLeitura ? (
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <Switch checked={r.ativo} onChange={() => toggleRec.mutate(r)} label={r.ativo ? 'Pausar' : 'Reativar'} />
+                  </span>
+                ) : undefined}
+                onClick={somenteLeitura ? undefined : () => setEditRec(r)}
+              />
+            ))}
+          </div>
+        )}
       </Card>
 
       {porCategoria.length > 0 && (
@@ -220,6 +297,46 @@ export default function Receitas() {
           {activeFilters > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-semibold text-on-brand">{activeFilters}</span>}
         </Button>
       </div>
+
+      {aReceber.length > 0 && (
+        <Card className="overflow-hidden border-info/25">
+          <div className="flex items-center gap-3 border-b border-line bg-info/6 px-4 py-3 sm:px-5">
+            <CalendarClock size={18} className="shrink-0 text-info" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-fg">A receber</p>
+              <p className="text-[13px] text-muted">{aReceber.length} {aReceber.length === 1 ? 'entrada prevista' : 'entradas previstas'} · {formatBRL(sum(aReceber))}</p>
+            </div>
+          </div>
+          <div className="divide-y divide-line">
+            <AnimatePresence initial={false}>
+              {aReceber.map((r) => {
+                const st = dueStatus(r.data_recebimento);
+                return (
+                  <SaidaSuave key={r.id}>
+                    <TxRow
+                      icon={categoryIcon(r.categoria)}
+                      tone="info"
+                      title={r.descricao}
+                      subtitle={<span className={st.days < 0 ? 'text-warn' : ''}>{st.days < 0 ? `Prevista para ${formatDayMonth(r.data_recebimento)} · atrasada` : st.days === 0 ? 'Prevista para hoje' : `Prevista para ${formatDayMonth(r.data_recebimento)}`}</span>}
+                      amount={formatBRL(r.valor)}
+                      meta={!somenteLeitura ? (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setRecebendo(r); }}
+                          className="h-7 rounded-lg bg-pos/12 px-2.5 text-xs font-semibold text-pos transition-colors hover:bg-pos hover:text-white"
+                        >
+                          Recebi
+                        </button>
+                      ) : undefined}
+                      onClick={() => setEditing(r)}
+                    />
+                  </SaidaSuave>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        </Card>
+      )}
 
       {(activeFilters > 0 || q) && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm">
@@ -301,8 +418,74 @@ export default function Receitas() {
         open={!!editing}
         receita={editing}
         onClose={() => setEditing(null)}
-        onDelete={editing ? () => askDelete(editing) : undefined}
+        onDelete={editing && !somenteLeitura ? () => askDelete(editing) : undefined}
       />
+      <ReceitaFormSheet
+        open={!!editRec || novaRec}
+        recorrente={editRec}
+        onClose={() => { setEditRec(null); setNovaRec(false); }}
+        onDelete={editRec ? () => askDeleteRec(editRec) : undefined}
+      />
+      <ReceberSheet receita={recebendo} onClose={() => setRecebendo(null)} />
     </div>
+  );
+}
+
+/** Confirma que uma receita prevista entrou: data, valor e conta reais. */
+function ReceberSheet({ receita, onClose }: { receita: Receita | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { data: contas = [] } = useContas();
+  const [data, setData] = useState(todayISO());
+  const [valor, setValor] = useState('');
+  const [conta, setConta] = useState('');
+  const [ultima, setUltima] = useState<string | null>(null);
+
+  // Ao abrir outra receita, os campos voltam aos valores dela
+  if (receita && receita.id !== ultima) {
+    setUltima(receita.id);
+    setData(todayISO());
+    setValor(toMoneyInput(receita.valor));
+    setConta(receita.conta_id ?? '');
+  }
+
+  const salvar = useMutation({
+    mutationFn: () => apiFetch(`/api/receitas/${receita!.id}/receber`, {
+      method: 'PATCH',
+      body: JSON.stringify({ data, valor: parseMoney(valor) || undefined, conta_id: conta || null }),
+    }),
+    onSuccess: () => {
+      invalidateFinance(qc);
+      toast.success('Recebimento confirmado');
+      onClose();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Não foi possível confirmar'),
+  });
+
+  return (
+    <Sheet
+      open={!!receita}
+      onClose={onClose}
+      title="Confirmar recebimento"
+      description={receita?.descricao}
+      size="sm"
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" size="lg" className="flex-1" onClick={onClose}>Cancelar</Button>
+          <Button size="lg" className="flex-[2]" isLoading={salvar.isPending} onClick={() => salvar.mutate()}>Confirmar</Button>
+        </div>
+      }
+    >
+      <div className="space-y-4 pt-1">
+        <MoneyInput size="lg" label="Valor recebido" value={valor} onChange={setValor} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input label="Data" type="date" value={data} onChange={(e) => setData(e.target.value)} />
+          <Select label="Entrou na conta" value={conta} onChange={(e) => setConta(e.target.value)}>
+            <option value="">Não informar</option>
+            {contas.filter((c) => c.ativo || c.id === conta).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </Select>
+        </div>
+        {receita?.recorrente_id && <Badge tone="info"><Repeat size={12} /> Receita recorrente</Badge>}
+      </div>
+    </Sheet>
   );
 }

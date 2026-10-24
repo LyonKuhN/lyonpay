@@ -33,7 +33,7 @@ const KEY = ['admin', 'compras'];
 const sum = (arr: Compra[]) => arr.reduce((acc, c) => acc + (Number(c.valor) || 0), 0);
 
 export default function AdminCompras() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const qc = useQueryClient();
   const confirm = useConfirm();
   const gruposListId = useId();
@@ -53,7 +53,7 @@ export default function AdminCompras() {
   const comprasQ = useQuery({
     queryKey: KEY,
     queryFn: () => apiFetch('/api/admin/compras') as Promise<Compra[]>,
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
   const compras = useMemo(() => (Array.isArray(comprasQ.data) ? comprasQ.data : []), [comprasQ.data]);
 

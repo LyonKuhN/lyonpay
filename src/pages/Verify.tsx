@@ -28,11 +28,12 @@ export default function Verify() {
         const response = await fetch(API_BASE_URL + '/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ token }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Não foi possível confirmar o e-mail');
-        login(data.token, data.user);
+        login(data.user);
         setStatus('success');
         setMessage('E-mail confirmado');
         setTimeout(() => navigate('/dashboard'), 2500);

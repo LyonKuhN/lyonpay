@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { BellRing, CircleCheck, Crown, KeyRound, LogOut, Moon, Sparkles, Ticket, Trash2, TriangleAlert } from 'lucide-react';
+import {
+  BellRing, Briefcase, CircleCheck, Cookie, Crown, ExternalLink, KeyRound, LogOut, Moon, Repeat, Sparkles, Ticket, Trash2, TriangleAlert,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useEspaco } from '../contexts/EspacoContext';
+import { abrirPreferenciasCookies } from '../lib/analytics';
+import { NotificacoesPush } from '../components/config/NotificacoesPush';
+import { Compartilhamento } from '../components/config/Compartilhamento';
+import { MeuPluggy } from '../components/config/MeuPluggy';
+import { useMeuPluggy } from '../hooks/queries';
+import { InstalarApp } from '../components/InstalarApp';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiFetch } from '../services/api';
 import { useConfirm } from '../components/ui/confirm';
@@ -53,6 +62,10 @@ export default function Config() {
   const [name, setName] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
   const [savingNotif, setSavingNotif] = useState(false);
+  const [savingPref, setSavingPref] = useState<string | null>(null);
+  const [abrindoPortal, setAbrindoPortal] = useState(false);
+  const { compartilhado } = useEspaco();
+  const pluggyQ = useMeuPluggy();
   const [saving2FA, setSaving2FA] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [cupom, setCupom] = useState('');
@@ -117,6 +130,33 @@ export default function Config() {
     }
   };
 
+  /** Preferências simples do perfil (liga/desliga). */
+  const salvarPref = async (campo: 'gerar_fixas_auto' | 'modo_empresa', valor: boolean, msg: string) => {
+    if (!user) return;
+    setSavingPref(campo);
+    try {
+      await apiFetch('/api/auth/me', { method: 'PATCH', body: JSON.stringify({ [campo]: valor }) });
+      updateUser({ ...user, [campo]: valor });
+      toast.success(msg);
+    } catch (err) {
+      toast.error((err as Error).message || 'Não foi possível salvar');
+    } finally {
+      setSavingPref(null);
+    }
+  };
+
+  /** Portal da Stripe: cancelar, trocar o cartão e baixar as faturas. */
+  const abrirPortal = async () => {
+    setAbrindoPortal(true);
+    try {
+      const data = await apiFetch('/api/stripe/portal', { method: 'POST' });
+      if (data?.url) window.location.href = data.url;
+    } catch (err) {
+      toast.error((err as Error).message || 'Não foi possível abrir o portal');
+      setAbrindoPortal(false);
+    }
+  };
+
   const toggle2FA = async (enabled: boolean) => {
     if (!user) return;
     setSaving2FA(true);
@@ -177,7 +217,7 @@ export default function Config() {
     if (!ok) return;
     try {
       await apiFetch('/api/auth/me', { method: 'DELETE' });
-      logout();
+      await logout();
       navigate('/');
     } catch (err) {
       toast.error((err as Error).message || 'Não foi possível excluir a conta');
@@ -186,7 +226,7 @@ export default function Config() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader title="Configurações" description="Conta, segurança e assinatura." />
+      <PageHeader title="Configurações" description="Conta, preferências, compartilhamento e assinatura." />
 
       {isExpired && (
         <div className="flex flex-col gap-4 rounded-2xl border border-neg/25 bg-neg/8 p-5 sm:flex-row sm:items-center">
@@ -222,13 +262,52 @@ export default function Config() {
             description="Às 8h, quando houver contas vencendo no dia."
             control={<Switch checked={user?.notificacoes_diarias ?? true} onChange={toggleNotif} disabled={savingNotif} label="Aviso diário por e-mail" />}
           />
+          <NotificacoesPush Row={Row} />
+          <Row
+            icon={Repeat}
+            title="Gerar as contas fixas sozinho"
+            description="Todo dia 1º, as fixas e as receitas recorrentes do mês entram sem você precisar gerar."
+            control={
+              <Switch
+                checked={!!user?.gerar_fixas_auto}
+                disabled={savingPref === 'gerar_fixas_auto'}
+                onChange={(v) => salvarPref('gerar_fixas_auto', v, v ? 'As fixas serão geradas todo dia 1º' : 'Geração automática desligada')}
+                label="Gerar as contas fixas sozinho"
+              />
+            }
+          />
+          <Row
+            icon={Briefcase}
+            title="Modo PJ / MEI"
+            description="Separa lançamentos, contas e cartões entre pessoal e empresa, com filtro em todas as telas."
+            control={
+              <Switch
+                checked={!!user?.modo_empresa}
+                disabled={savingPref === 'modo_empresa'}
+                onChange={(v) => salvarPref('modo_empresa', v, v ? 'Modo PJ ligado: escolha Pessoal ou Empresa no menu' : 'Modo PJ desligado')}
+                label="Modo PJ / MEI"
+              />
+            }
+          />
           <Row
             icon={Moon}
             title="Tema escuro"
             control={<Switch checked={theme === 'dark'} onChange={toggleTheme} label="Tema escuro" />}
           />
+          <Row
+            icon={Cookie}
+            title="Cookies e métricas"
+            description="Escolha se o Google Analytics e o Clarity podem ser usados."
+            control={<Button variant="secondary" size="sm" onClick={abrirPreferenciasCookies}>Alterar</Button>}
+          />
         </div>
       </Section>
+
+      {!compartilhado && (
+        <Section title="Compartilhar" description="Casal, família ou sócio: cada um com o próprio login.">
+          <Compartilhamento />
+        </Section>
+      )}
 
       <Section title="Segurança">
         <Row
@@ -257,12 +336,23 @@ export default function Config() {
               </div>
               <p className="mt-1 text-sm text-muted">
                 {isAdmin ? 'Acesso completo de administrador.'
-                  : isPro ? (lifetime ? 'Acesso liberado por cupom.' : `Válida até ${expiresAt?.toLocaleDateString('pt-BR')}.`)
+                  : isPro ? (lifetime ? 'Acesso liberado por cupom.' : user?.cancela_no_fim
+                    ? `Cancelada. O acesso continua até ${expiresAt?.toLocaleDateString('pt-BR')}.`
+                    : `Renova em ${expiresAt?.toLocaleDateString('pt-BR')}.`)
                   : isExpired ? 'Assine para voltar a usar todos os recursos.'
                   : `${daysLeft} ${daysLeft === 1 ? 'dia restante' : 'dias restantes'} de teste.`}
               </p>
             </div>
           </div>
+
+          {isPro && !isAdmin && !lifetime && user?.subscribed && (
+            <div className="mt-5 border-t border-line pt-5">
+              <Button variant="secondary" fullWidth onClick={abrirPortal} isLoading={abrindoPortal}>
+                <ExternalLink size={17} /> {user?.cancela_no_fim ? 'Reativar ou ver faturas' : 'Gerenciar assinatura'}
+              </Button>
+              <p className="mt-2 text-center text-xs text-subtle">Cancele, troque o cartão ou baixe as faturas no portal seguro da Stripe.</p>
+            </div>
+          )}
 
           {!isPro && (
             <div className="mt-5 space-y-4 border-t border-line pt-5">
@@ -288,13 +378,21 @@ export default function Config() {
         </div>
       </Section>
 
+      {pluggyQ.data?.disponivel && !compartilhado && (
+        <Section title="Meu Pluggy" description="Conexão com os seus bancos (só na sua conta).">
+          <MeuPluggy />
+        </Section>
+      )}
+
+      <InstalarApp />
+
       <Section title="Conta">
         <div className="divide-y divide-line">
           <Row
             icon={LogOut}
             title="Sair da conta"
             description="Encerra a sessão neste aparelho."
-            control={<Button variant="secondary" size="sm" onClick={() => { logout(); navigate('/'); }}>Sair</Button>}
+            control={<Button variant="secondary" size="sm" onClick={async () => { await logout(); navigate('/'); }}>Sair</Button>}
           />
           <Row
             icon={Trash2}

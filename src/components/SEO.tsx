@@ -42,37 +42,37 @@ export default function SEO({
     }
 
     // OG Title
-    let ogTitleTag = document.querySelector('meta[property="og:title"]');
+    const ogTitleTag = document.querySelector('meta[property="og:title"]');
     if (ogTitleTag) {
       ogTitleTag.setAttribute('content', title);
     }
 
     // OG Description
-    let ogDescTag = document.querySelector('meta[property="og:description"]');
+    const ogDescTag = document.querySelector('meta[property="og:description"]');
     if (ogDescTag) {
       ogDescTag.setAttribute('content', description);
     }
 
     // OG URL
-    let ogUrlTag = document.querySelector('meta[property="og:url"]');
+    const ogUrlTag = document.querySelector('meta[property="og:url"]');
     if (ogUrlTag) {
       ogUrlTag.setAttribute('content', canonicalUrl);
     }
 
     // OG Image
-    let ogImgTag = document.querySelector('meta[property="og:image"]');
+    const ogImgTag = document.querySelector('meta[property="og:image"]');
     if (ogImgTag) {
       ogImgTag.setAttribute('content', ogImage);
     }
 
     // Twitter Title
-    let twitterTitle = document.querySelector('meta[property="twitter:title"]');
+    const twitterTitle = document.querySelector('meta[property="twitter:title"]');
     if (twitterTitle) {
       twitterTitle.setAttribute('content', title);
     }
 
     // Twitter Description
-    let twitterDesc = document.querySelector('meta[property="twitter:description"]');
+    const twitterDesc = document.querySelector('meta[property="twitter:description"]');
     if (twitterDesc) {
       twitterDesc.setAttribute('content', description);
     }

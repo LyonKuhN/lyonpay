@@ -1,21 +1,23 @@
 {
+  "id": "/dashboard",
   "short_name": "Lyonk",
-  "name": "Lyonk Finance",
-  "description": "Controle financeiro inteligente.",
+  "name": "Lyonk · Controle financeiro",
+  "description": "Contas a pagar, cartões, orçamentos e relatórios num só lugar.",
+  "lang": "pt-BR",
   "icons": [
-    {
-      "src": "/logo.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/logo.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
+    { "src": "/icons/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
   ],
-  "start_url": "/",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#0B0C0F",
-  "background_color": "#0B0C0F"
+  "background_color": "#0B0C0F",
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    { "name": "Contas a pagar", "url": "/pagamentos", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Importar extrato", "url": "/importar", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
 }

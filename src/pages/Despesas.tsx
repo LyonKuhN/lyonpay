@@ -20,7 +20,7 @@ import { cn } from '../lib/cn';
 import {
   dateKey, dueStatus, formatBRL, formatDate, formatDayMonth, MONTHS, parseDateOnly, parseMoney, percent, todayISO,
 } from '../lib/format';
-import { normalizeTipo, TIPO_LABEL, type Despesa, type TipoDespesa } from '../lib/types';
+import { valorEfetivo, somaEfetiva, normalizeTipo, TIPO_LABEL, type Despesa, type TipoDespesa } from '../lib/types';
 
 type Aba = 'lancamentos' | 'analise' | 'modelos';
 
@@ -46,7 +46,8 @@ interface Group {
   categoria?: string | null;
 }
 
-const sum = (arr: Despesa[]) => arr.reduce((acc, x) => acc + (Number(x.valor) || 0), 0);
+// Pagas contam pelo valor efetivamente pago (juros, multa ou pagamento parcial)
+const sum = (arr: Despesa[]) => somaEfetiva(arr);
 const stripParcela = (d: string) => d.replace(/\s*\(\d+\/\d+\)$/, '');
 
 export default function Despesas() {
@@ -464,7 +465,7 @@ function Analise({ despesas, loading }: { despesas: Despesa[]; loading: boolean 
     for (const d of list) porTipo[normalizeTipo(d.tipo)].push(d);
     const total = sum(list);
     const cat = new Map<string, number>();
-    for (const d of list) cat.set(d.categoria || 'Outros', (cat.get(d.categoria || 'Outros') ?? 0) + (Number(d.valor) || 0));
+    for (const d of list) cat.set(d.categoria || 'Outros', (cat.get(d.categoria || 'Outros') ?? 0) + valorEfetivo(d));
     return {
       list,
       total,

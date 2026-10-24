@@ -6,6 +6,13 @@ import { useConfirm } from '../components/ui/confirm';
 import { formatBRL } from '../lib/format';
 import type { Despesa } from '../lib/types';
 
+export interface PagamentoInfo {
+  data_pagamento?: string;
+  valor_pago?: number | null;
+  conta_id?: string | null;
+  gerar_restante?: boolean;
+}
+
 function UndoToast({ id, text, onUndo }: { id: string; text: string; onUndo: () => void }) {
   return (
     <span className="flex items-center gap-3">
@@ -28,7 +35,7 @@ export function useDespesaActions() {
 
   const setPago = useMutation({
     mutationFn: ({ id, pago }: { id: string; pago: boolean }) =>
-      apiFetch(`/api/despesas/${id}/${pago ? 'pagar' : 'pendente'}`, { method: 'PATCH' }),
+      apiFetch(`/api/despesas/${id}/${pago ? 'pagar' : 'pendente'}`, { method: 'PATCH', body: JSON.stringify({}) }),
     onMutate: async ({ id, pago }) => {
       await qc.cancelQueries({ queryKey: ['despesas'] });
       const snapshot = qc.getQueriesData({ queryKey: ['despesas'] });
@@ -55,6 +62,29 @@ export function useDespesaActions() {
     setPago.mutate({ id: d.id, pago: false });
     toast.success(`${d.descricao} voltou para pendente`);
   };
+
+  /** Pagamento com data, valor e conta reais (juros, multa ou pagamento parcial). */
+  const pagamento = useMutation({
+    mutationFn: ({ id, ...body }: PagamentoInfo & { id: string }) =>
+      apiFetch(`/api/despesas/${id}/pagar`, { method: 'PATCH', body: JSON.stringify(body) }),
+    onSuccess: (res: { restante?: Despesa | null } | null) => {
+      invalidateFinance(qc);
+      toast.success(res?.restante ? `Pagamento registrado. O restante de ${formatBRL(res.restante.valor)} ficou pendente.` : 'Pagamento registrado');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Não foi possível registrar o pagamento'),
+  });
+
+  /** Várias contas de uma vez (seleção na lista ou a fatura inteira do cartão). */
+  const lote = useMutation({
+    mutationFn: (body: { ids: string[]; data_pagamento?: string; conta_id?: string | null }) =>
+      apiFetch('/api/despesas/pagar-lote', { method: 'PATCH', body: JSON.stringify(body) }),
+    onSuccess: (res: { pagas?: number } | null) => {
+      invalidateFinance(qc);
+      const n = res?.pagas ?? 0;
+      toast.success(`${n} ${n === 1 ? 'conta paga' : 'contas pagas'}`);
+    },
+    onError: (err: Error) => toast.error(err.message || 'Não foi possível pagar as contas'),
+  });
 
   const valor = useMutation({
     mutationFn: ({ id, valor }: { id: string; valor: number }) =>
@@ -101,6 +131,10 @@ export function useDespesaActions() {
 
   return {
     pagar,
+    pagarCom: pagamento.mutateAsync,
+    pagandoCom: pagamento.isPending,
+    pagarLote: lote.mutateAsync,
+    pagandoLote: lote.isPending,
     desfazer,
     remove,
     removeGroup,

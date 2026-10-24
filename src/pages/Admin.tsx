@@ -16,16 +16,16 @@ interface AdminUser { id: string; email: string; display_name?: string; role: st
 interface Cupom { id: string; codigo: string; desconto_percentual: number | string; max_usos?: number | null; usos_atuais?: number }
 
 export default function Admin() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [userQuery, setUserQuery] = useState('');
   const [fee, setFee] = useState<string | null>(null);
   const [novo, setNovo] = useState({ codigo: '', desconto: '', max: '' });
 
-  const statsQ = useQuery({ queryKey: ['admin', 'stats'], queryFn: () => apiFetch('/api/admin/stats') as Promise<Stats>, enabled: !!token });
-  const usersQ = useQuery({ queryKey: ['admin', 'users'], queryFn: () => apiFetch('/api/admin/users') as Promise<AdminUser[]>, enabled: !!token });
-  const cuponsQ = useQuery({ queryKey: ['admin', 'cupons'], queryFn: () => apiFetch('/api/admin/cupons') as Promise<Cupom[]>, enabled: !!token });
+  const statsQ = useQuery({ queryKey: ['admin', 'stats'], queryFn: () => apiFetch('/api/admin/stats') as Promise<Stats>, enabled: isAuthenticated });
+  const usersQ = useQuery({ queryKey: ['admin', 'users'], queryFn: () => apiFetch('/api/admin/users') as Promise<AdminUser[]>, enabled: isAuthenticated });
+  const cuponsQ = useQuery({ queryKey: ['admin', 'cupons'], queryFn: () => apiFetch('/api/admin/cupons') as Promise<Cupom[]>, enabled: isAuthenticated });
 
   const stats = statsQ.data;
   const users = useMemo(() => (Array.isArray(usersQ.data) ? usersQ.data : []), [usersQ.data]);

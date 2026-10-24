@@ -6,26 +6,8 @@
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/logo.png" />
-    
-    <!-- Microsoft Clarity (Heatmaps & Session Replays) -->
-    <script type="text/javascript">
-        (function(c,l,a,r,i,t,y){
-            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window, document, "clarity", "script", "y3wzdjv9g6");
-    </script>
-
-    <!-- Google tag (gtag.js) - Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2HW08XP0XW"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-2HW08XP0XW');
-    </script>
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- Google Analytics e Microsoft Clarity só carregam depois do aceite dos cookies (src/lib/analytics.ts) -->
 
     <!-- Pré-conexão de Fontes para Performance (Core Web Vitals) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -99,12 +81,6 @@
             "priceCurrency": "BRL",
             "priceValidUntil": "2027-12-31",
             "availability": "https://schema.org/InStock"
-          },
-          "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.9",
-            "ratingCount": "2400",
-            "reviewCount": "2400"
           }
         },
         {
@@ -140,7 +116,7 @@
               "name": "Meus dados financeiros estão seguros no Lyonk?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Sim. Todos os dados são criptografados de ponta a ponta e trafegam via protocolo seguro HTTPS. Suas informações são privadas e nunca compartilhadas com terceiros."
+                "text": "Sim. Toda a comunicação usa HTTPS, as senhas são guardadas com hash bcrypt, a sessão fica em cookie protegido e você pode ativar a verificação em duas etapas. Seus dados não são vendidos nem compartilhados com terceiros."
               }
             }
           ]

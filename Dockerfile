@@ -1,24 +1,17 @@
-# Estágio de Build
-FROM node:20-slim as build
+# Estágio de build
+FROM node:20-slim AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# A API é chamada pelo mesmo endereço do site (/api, encaminhado pelo nginx).
+# VITE_API_URL não é mais usado no build de produção.
 RUN npm run build
 
-# Estágio de Produção
+# Estágio de produção
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-# Configuração básica do Nginx para Single Page Apps (React Router)
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html; \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-seguranca.conf /etc/nginx/snippets/seguranca.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

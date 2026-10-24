@@ -15,12 +15,13 @@ import { DespesaFormSheet, type DespesaFormTarget } from '../components/forms/De
 import { categoryIcon } from '../lib/categories';
 import { cn } from '../lib/cn';
 import { dateKey, daysInMonth, formatBRL, formatBRLCompact, formatDateTime, parseDateOnly, timestampKey, todayISO } from '../lib/format';
-import type { Despesa, Lembrete, Receita } from '../lib/types';
+import { valorEfetivo, type Despesa, type Lembrete, type Receita } from '../lib/types';
 
 interface DayEvents { despesas: Despesa[]; receitas: Receita[]; lembretes: Lembrete[] }
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-const sum = (arr: Array<{ valor: number | string }>) => arr.reduce((acc, x) => acc + (Number(x.valor) || 0), 0);
+// Despesa paga conta pelo valor efetivamente pago
+const sum = (arr: Array<{ valor: number | string; valor_pago?: number | string | null; pago?: boolean }>) => arr.reduce((acc, x) => acc + valorEfetivo({ valor: x.valor, valor_pago: x.valor_pago, pago: !!x.pago }), 0);
 
 export default function Calendario() {
   const now = new Date();

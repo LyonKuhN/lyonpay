@@ -1,101 +1,126 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { apiFetch } from '../services/api';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
   role: 'admin' | 'user';
   subscribed: boolean;
   expires_at?: string;
+  cancela_no_fim?: boolean;
   two_factor_enabled?: boolean | null;
   notificacoes_diarias?: boolean;
+  gerar_fixas_auto?: boolean;
+  onboarding_concluido?: boolean;
+  modo_empresa?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  /** Depois de entrar: a sessão já está no cookie; aqui só guardamos os dados para a interface. */
+  login: (user: User) => void;
+  logout: () => Promise<void>;
   updateUser: (newUser: User) => void;
-  /** Busca no servidor o plano e a validade atuais (sem novo login). */
+  /** Busca no servidor o plano e as preferências atuais. */
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const CHAVE_USUARIO = 'lyonk_user';
 
-function readStored(): { token: string | null; user: User | null } {
+function lerUsuario(): User | null {
   try {
-    const token = localStorage.getItem('lyonk_token');
-    const raw = localStorage.getItem('lyonk_user');
-    return token && raw ? { token, user: JSON.parse(raw) } : { token: null, user: null };
+    // O token antigo ficava no navegador; agora a sessão é só o cookie httpOnly
+    localStorage.removeItem('lyonk_token');
+    const raw = localStorage.getItem(CHAVE_USUARIO);
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    return { token: null, user: null };
+    return null;
+  }
+}
+
+function salvarUsuario(user: User | null) {
+  try {
+    if (user) localStorage.setItem(CHAVE_USUARIO, JSON.stringify(user));
+    else localStorage.removeItem(CHAVE_USUARIO);
+  } catch {
+    // sem armazenamento: segue só em memória
   }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [{ token, user }, setSession] = useState(readStored);
+  const [user, setUser] = useState<User | null>(lerUsuario);
+  // Sem dados guardados, confere uma vez se há sessão (cookie) antes de decidir o que mostrar
+  const [isLoading, setIsLoading] = useState(() => !lerUsuario());
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  const clear = () => {
-    setSession({ token: null, user: null });
-    localStorage.removeItem('lyonk_token');
-    localStorage.removeItem('lyonk_user');
-  };
+  const limpar = useCallback(() => {
+    setUser(null);
+    salvarUsuario(null);
+  }, []);
 
-  // apiFetch dispara este evento quando a API responde 401/403
   useEffect(() => {
     const handleExpired = () => {
-      if (!localStorage.getItem('lyonk_token')) return;
+      if (!localStorage.getItem(CHAVE_USUARIO)) return;
       setSessionExpired(true);
-      clear();
+      limpar();
     };
     window.addEventListener('session-expired', handleExpired);
     return () => window.removeEventListener('session-expired', handleExpired);
+  }, [limpar]);
+
+  const login = useCallback((novo: User) => {
+    setUser(novo);
+    salvarUsuario(novo);
+    setSessionExpired(false);
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
-    setSession({ token: newToken, user: newUser });
-    setSessionExpired(false);
-    localStorage.setItem('lyonk_token', newToken);
-    localStorage.setItem('lyonk_user', JSON.stringify(newUser));
-  };
-
-  const updateUser = useCallback((newUser: User) => {
-    setSession((s) => ({ ...s, user: newUser }));
-    localStorage.setItem('lyonk_user', JSON.stringify(newUser));
+  const updateUser = useCallback((novo: User) => {
+    setUser(novo);
+    salvarUsuario(novo);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const current = localStorage.getItem('lyonk_token');
-    if (!current) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${current}` } });
-      if (res.status === 401 || res.status === 403) {
-        window.dispatchEvent(new CustomEvent('session-expired'));
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, { credentials: 'include' });
+      if (res.status === 401) {
+        limpar();
         return;
       }
       if (!res.ok) return;
       const fresh = await res.json();
-      if (fresh?.id) updateUser(fresh);
+      if (fresh?.id) {
+        setUser(fresh);
+        salvarUsuario(fresh);
+      }
     } catch {
       // sem rede: segue com os dados guardados
+    } finally {
+      setIsLoading(false);
     }
-  }, [updateUser]);
+  }, [limpar]);
 
-  // Ao abrir o app, confirma plano e validade no servidor (o estado só muda depois da resposta)
+  // Ao abrir o app, confirma a sessão e o plano no servidor (o estado só muda depois da resposta)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshUser();
   }, [refreshUser]);
 
-  const logout = () => clear();
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // mesmo sem resposta, limpa a interface
+    }
+    limpar();
+  }, [limpar]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, updateUser, refreshUser, isAuthenticated: !!token, isLoading: false }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, refreshUser, isAuthenticated: !!user, isLoading }}>
       {children}
 
       {sessionExpired && (
@@ -111,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             <p className="mt-1.5 text-[15px] leading-relaxed text-muted">Por segurança, entre de novo para continuar.</p>
             <button
               type="button"
-              onClick={() => { setSessionExpired(false); window.location.href = '/'; }}
+              onClick={() => { setSessionExpired(false); window.location.href = '/?entrar=1'; }}
               className="mt-6 h-12 w-full rounded-xl bg-brand text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-soft"
             >
               Entrar novamente
@@ -125,8 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './contexts/AuthContext';
+import { useEspaco } from './contexts/EspacoContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ConfirmProvider } from './components/ui/confirm';
 import AppShell from './components/layout/AppShell';
@@ -18,6 +19,12 @@ const Despesas = lazy(() => import('./pages/Despesas'));
 const Receitas = lazy(() => import('./pages/Receitas'));
 const Calendario = lazy(() => import('./pages/Calendario'));
 const Config = lazy(() => import('./pages/Config'));
+const Carteira = lazy(() => import('./pages/Carteira'));
+const Orcamentos = lazy(() => import('./pages/Orcamentos'));
+const Metas = lazy(() => import('./pages/Metas'));
+const Relatorios = lazy(() => import('./pages/Relatorios'));
+const Importar = lazy(() => import('./pages/Importar'));
+const Convite = lazy(() => import('./pages/Convite'));
 const Admin = lazy(() => import('./pages/Admin'));
 const AdminCompras = lazy(() => import('./pages/AdminCompras'));
 const AdminLembretes = lazy(() => import('./pages/AdminLembretes'));
@@ -35,13 +42,19 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   if (isLoading) return <FullPageLoader />;
-  if (!isAuthenticated) return <Navigate to="/" state={{ from: location.pathname }} replace />;
+  if (!isAuthenticated) return <Navigate to="/" state={{ from: location.pathname + location.search }} replace />;
   return <>{children}</>;
 }
 
 /** Exige assinatura ou teste vigente; quem expirou vai para Configurações. */
 function RequireActive({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { compartilhado, ativo } = useEspaco();
+  // Nas finanças de outra pessoa vale o plano de quem compartilhou
+  if (compartilhado) {
+    if (ativo?.plano_ativo === false) return <Navigate to="/config?expired=true" replace />;
+    return <>{children}</>;
+  }
   if (user && user.role !== 'admin') {
     const expired = user.expires_at ? new Date(user.expires_at) < new Date() : true;
     if (expired) return <Navigate to="/config?expired=true" replace />;
@@ -86,6 +99,12 @@ function AppRoutes() {
           <Route path="/despesas" element={<RequireActive><Despesas /></RequireActive>} />
           <Route path="/receitas" element={<RequireActive><Receitas /></RequireActive>} />
           <Route path="/calendario" element={<RequireActive><Calendario /></RequireActive>} />
+          <Route path="/carteira" element={<RequireActive><Carteira /></RequireActive>} />
+          <Route path="/orcamentos" element={<RequireActive><Orcamentos /></RequireActive>} />
+          <Route path="/metas" element={<RequireActive><Metas /></RequireActive>} />
+          <Route path="/relatorios" element={<RequireActive><Relatorios /></RequireActive>} />
+          <Route path="/importar" element={<RequireActive><Importar /></RequireActive>} />
+          <Route path="/convite" element={<Convite />} />
           <Route path="/config" element={<Config />} />
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
           <Route path="/admin/compras" element={<RequireAdmin><AdminCompras /></RequireAdmin>} />

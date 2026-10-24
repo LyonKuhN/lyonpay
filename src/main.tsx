@@ -5,6 +5,8 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { carregarAnalytics, lerConsentimento } from './lib/analytics'
+import './lib/pwa'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,6 +17,16 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+// Métricas só com o aceite dos cookies
+if (lerConsentimento() === 'accepted') carregarAnalytics();
+
+// Service worker: app instalável e notificações de vencimento
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  });
+}
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -43,4 +55,3 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 )
-

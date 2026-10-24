@@ -1,6 +1,7 @@
-import { ArrowLeft, Shield, FileText, Lock, Eye, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Shield, FileText, Lock, Eye, CheckCircle, Server } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
+import { abrirPreferenciasCookies } from '../lib/analytics';
 
 export default function PrivacyPolicy() {
   const navigate = useNavigate();
@@ -14,22 +15,27 @@ export default function PrivacyPolicy() {
     {
       icon: Lock,
       title: 'Segurança dos Seus Dados',
-      content: 'Toda e qualquer senha cadastrada é convertida em um hash seguro (via bcrypt) antes de ser persistida. Suas requisições trafegam de forma criptografada usando protocolos HTTPS e tokens JWT de curta duração. Seus dados financeiros são privados e pertencem unicamente a você.'
+      content: 'Toda senha cadastrada é convertida em um hash bcrypt antes de ser guardada. A comunicação usa HTTPS e a sessão fica em um cookie httpOnly (inacessível a scripts da página), com expiração automática. Você pode ativar a verificação em duas etapas por e-mail. Comprovantes anexados ficam no nosso banco de dados e só são exibidos para quem tem acesso à conta.'
     },
     {
       icon: Shield,
       title: 'Compartilhamento com Terceiros',
-      content: 'A Lyonk não vende, aluga ou compartilha suas informações pessoais ou dados de transações financeiras com nenhum tipo de anunciante, corretora ou instituição externa. A privacidade dos seus registros de despesas e receitas é absoluta.'
+      content: 'A Lyonk não vende, aluga ou compartilha suas informações pessoais ou dados de transações financeiras com anunciantes, corretoras ou outras instituições. Se você convidar alguém para a sua conta, essa pessoa passa a ver (ou editar, se você permitir) os seus lançamentos, e você pode remover o acesso quando quiser.'
     },
     {
       icon: FileText,
-      title: 'Cookies e Analytics (Google Analytics & Clarity)',
-      content: 'Utilizamos cookies funcionais e ferramentas de métricas agregadas (como Google Analytics 4 e Microsoft Clarity) para analisar o tráfego, mapa de calor e usabilidade da plataforma. Todos os dados de análise são anonimizados e não contêm PII (informações pessoalmente identificáveis), garantindo total conformidade com a política de privacidade do Google e com a LGPD.'
+      title: 'Cookies e métricas (Google Analytics e Clarity)',
+      content: 'O cookie de sessão é essencial e serve só para manter você conectado. Google Analytics 4 e Microsoft Clarity só são carregados se você aceitar no aviso de cookies; o IP é anonimizado e não enviamos nome, e-mail nem valores. Você pode mudar sua escolha a qualquer momento no botão abaixo ou no rodapé do site.'
+    },
+    {
+      icon: Server,
+      title: 'Serviços que usamos',
+      content: 'Pagamentos são processados pela Stripe: o Lyonk não recebe nem guarda os dados do seu cartão. E-mails (confirmação, códigos e lembretes) são enviados pela Resend. Notificações no celular passam pelo serviço de push do seu navegador e só são enviadas se você ativar.'
     },
     {
       icon: CheckCircle,
       title: 'Seus Direitos (LGPD)',
-      content: 'De acordo com a Lei Geral de Proteção de Dados (LGPD), você tem total controle sobre seus registros. Você pode acessar, editar ou excluir qualquer dado financeiro inserido diretamente através dos painéis. Para exclusão permanente da sua conta, basta solicitar nas configurações do seu perfil.'
+      content: 'De acordo com a Lei Geral de Proteção de Dados (LGPD), você tem total controle sobre seus registros. Você pode acessar, editar ou excluir qualquer dado financeiro inserido diretamente através dos painéis. Você também pode exportar seus lançamentos e excluir a conta, com todos os dados, em Ajustes.'
     }
   ];
 
@@ -37,7 +43,7 @@ export default function PrivacyPolicy() {
     <div className="min-h-dvh bg-bg">
       <SEO
         title="Política de Privacidade e Termos de Uso | Lyonk"
-        description="Conheça a política de privacidade e termos de uso do Lyonk. Seus dados financeiros protegidos com transparência e conformidade total com a LGPD e Google Analytics."
+        description="Conheça a política de privacidade e termos de uso do Lyonk. Seus dados financeiros protegidos com transparência e de acordo com a LGPD."
         canonicalUrl="https://lyonk.com.br/politica-de-privacidade"
       />
       <header className="sticky top-0 z-10 border-b border-line bg-bg/85 pt-safe backdrop-blur-xl">
@@ -61,7 +67,7 @@ export default function PrivacyPolicy() {
           <p className="mt-2 text-[15px] leading-relaxed text-muted">
             Na Lyonk, sua vida financeira é assunto pessoal. Esta política descreve como coletamos, guardamos e protegemos seus dados.
           </p>
-          <p className="mt-3 text-xs font-medium text-subtle">Última atualização: junho de 2026</p>
+          <p className="mt-3 text-xs font-medium text-subtle">Última atualização: outubro de 2026</p>
         </div>
 
         {sections.map((sec) => (
@@ -84,6 +90,12 @@ export default function PrivacyPolicy() {
             <li>Reservamo-nos o direito de suspender acessos em caso de uso fraudulento do sistema ou comportamento que comprometa a estabilidade dos servidores.</li>
           </ul>
         </section>
+
+        <div className="flex justify-center pt-2">
+          <button type="button" onClick={abrirPreferenciasCookies} className="h-11 rounded-xl border border-line-strong px-5 text-sm font-semibold text-fg hover:bg-elevated">
+            Preferências de cookies
+          </button>
+        </div>
       </main>
     </div>
   );

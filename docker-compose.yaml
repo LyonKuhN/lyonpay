@@ -7,19 +7,37 @@ services:
       dockerfile: Dockerfile
     environment:
       - PORT=3005
+      - SERVICE_FQDN_LYONPAY_WEB=${SERVICE_FQDN_LYONPAY_WEB}
+      - DATABASE_URL=${DATABASE_URL}
+      # TLS do banco (opcional): true, e a CA em DATABASE_SSL_CA (ou DATABASE_SSL_REJECT_UNAUTHORIZED=false)
+      - DATABASE_SSL=${DATABASE_SSL:-false}
+      - DATABASE_SSL_CA=${DATABASE_SSL_CA:-}
+      - DATABASE_SSL_REJECT_UNAUTHORIZED=${DATABASE_SSL_REJECT_UNAUTHORIZED:-true}
+      - JWT_SECRET=${JWT_SECRET}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-465}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - EMAIL_SECURE=${EMAIL_SECURE:-true}
+      # Notificações no aparelho (gere com: node scripts/gerar-vapid.js)
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:adm@lyonk.com.br}
+      # Meu Pluggy (uso pessoal, só para PLUGGY_OWNER_EMAIL)
+      - PLUGGY_CLIENT_ID=${PLUGGY_CLIENT_ID:-}
+      - PLUGGY_CLIENT_SECRET=${PLUGGY_CLIENT_SECRET:-}
+      - PLUGGY_ITEM_IDS=${PLUGGY_ITEM_IDS:-}
+      - PLUGGY_OWNER_EMAIL=${PLUGGY_OWNER_EMAIL:-}
     restart: always
 
   lyonpay-web:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - lyonpay-api
     restart: always

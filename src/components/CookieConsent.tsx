@@ -3,8 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Cookie } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { lerConsentimento, salvarConsentimento } from '../lib/analytics';
 
-const PUBLIC_ROUTES = ['/', '/verify', '/reset-password', '/politica-de-privacidade'];
+const PUBLIC_ROUTES = ['/', '/verify', '/reset-password', '/politica-de-privacidade', '/convite'];
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
@@ -13,24 +14,18 @@ export default function CookieConsent() {
   const inApp = !PUBLIC_ROUTES.includes(pathname);
 
   useEffect(() => {
-    let consent: string | null;
-    try {
-      consent = localStorage.getItem('lyonk-cookie-consent');
-    } catch {
-      return;
-    }
-    if (!consent) {
-      const timer = setTimeout(() => setVisible(true), 1500);
-      return () => clearTimeout(timer);
-    }
+    const abrir = () => setVisible(true);
+    window.addEventListener('abrir-preferencias-cookies', abrir);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (!lerConsentimento()) timer = setTimeout(abrir, 1500);
+    return () => {
+      window.removeEventListener('abrir-preferencias-cookies', abrir);
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   const decide = (value: 'accepted' | 'declined') => {
-    try {
-      localStorage.setItem('lyonk-cookie-consent', value);
-    } catch {
-      // sem armazenamento, o aviso volta na próxima visita
-    }
+    salvarConsentimento(value);
     setVisible(false);
   };
 
@@ -51,16 +46,17 @@ export default function CookieConsent() {
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/12 text-brand"><Cookie size={18} /></span>
               <p className="text-[13px] leading-relaxed text-muted">
-                Usamos cookies essenciais para manter sua sessão segura e lembrar suas preferências.{' '}
+                Usamos cookies essenciais para manter sua sessão segura. Com a sua permissão, também usamos Google Analytics e Microsoft Clarity
+                para entender, de forma anônima, como o site é usado.{' '}
                 <Link to="/politica-de-privacidade" className="font-medium text-brand hover:underline">Saiba mais</Link>
               </p>
             </div>
             <div className="mt-3 flex gap-2">
               <button type="button" onClick={() => decide('declined')} className="h-10 flex-1 rounded-xl border border-line-strong text-sm font-semibold text-fg hover:bg-elevated">
-                Recusar
+                Só os essenciais
               </button>
-              <button type="button" onClick={() => decide('accepted')} className="h-10 flex-[1.4] rounded-xl bg-brand text-sm font-semibold text-on-brand hover:bg-brand-soft">
-                Aceitar
+              <button type="button" onClick={() => decide('accepted')} className="h-10 flex-[1.2] rounded-xl bg-brand text-sm font-semibold text-on-brand hover:bg-brand-soft">
+                Aceitar todos
               </button>
             </div>
           </div>

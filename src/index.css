@@ -136,3 +136,75 @@ html.light {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =====================================================
+   Impressão (relatórios em PDF pelo "Salvar como PDF")
+   Sempre no tema claro, sem menus e sem botões.
+   ===================================================== */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  html.dark,
+  html.light {
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-elevated: #f3f2ee;
+    --color-line: #e2ded4;
+    --color-line-strong: #cfc9bc;
+    --color-fg: #16150f;
+    --color-muted: #55524a;
+    --color-subtle: #807b70;
+    --color-brand: #8e6a1f;
+    --color-pos: #177a43;
+    --color-neg: #c42f2f;
+    --color-warn: #a85a07;
+    --color-info: #2457c5;
+    --shadow-soft: none;
+    --shadow-pop: none;
+    color-scheme: light;
+  }
+
+  body {
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  aside,
+  header,
+  nav,
+  .no-print,
+  [data-sonner-toaster],
+  #root > div > div[style*="position: fixed"] {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  main > div {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .print-break {
+    break-before: page;
+  }
+
+  .print-avoid {
+    break-inside: avoid;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+}
+
+.print-only {
+  display: none;
+}
